@@ -1,20 +1,30 @@
 'use client';
 
-import { createContext, useContext } from 'react';
-import { Branding } from '@/lib/db/schema';
+import { createContext, useContext, ReactNode } from 'react';
 
-interface BrandingContextType {
-  branding: Branding | null | undefined;
-}
+export type Branding = {
+  id: number;
+  name: string;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+} | null;
 
-const BrandingContext = createContext<BrandingContextType | undefined>(undefined);
+type BrandingContextType = {
+  branding: Branding;
+};
+
+const BrandingContext = createContext<BrandingContextType>({
+  branding: null,
+});
 
 export function BrandingProvider({
   children,
   branding,
 }: {
-  children: React.ReactNode;
-  branding: Branding | null | undefined;
+  children: ReactNode;
+  branding: Branding;
 }) {
   return (
     <BrandingContext.Provider value={{ branding }}>
@@ -23,10 +33,6 @@ export function BrandingProvider({
   );
 }
 
-export function useBranding() {
-  const context = useContext(BrandingContext);
-  if (context === undefined) {
-    throw new Error('useBranding must be used within a BrandingProvider');
-  }
-  return context;
+export function useBranding(): BrandingContextType {
+  return useContext(BrandingContext);
 }
