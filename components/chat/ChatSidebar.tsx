@@ -155,106 +155,102 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
         </div>
 
         {/* Assignment Section */}
-        {contactData && (
-          <div className="space-y-2 border-t pt-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assignment</p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-[10px]">{assignedUser ? assignedUser.name?.[0] || assignedUser.email[0] : 'U'}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">{assignedUser ? assignedUser.name || assignedUser.email : 'Unassigned'}</span>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2">
-                    {assignedUser ? 'Transfer' : 'Assign'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Select Agent</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleAssignAgent(null)}>
-                    Unassigned
-                  </DropdownMenuItem>
-                  {teamMembers?.map((member) => (
-                    <DropdownMenuItem
-                      key={member.id}
-                      onClick={() => handleAssignAgent(member.id)}
-                      className={assignedUser?.id === member.id ? 'bg-accent font-medium' : ''}
-                    >
-                      {member.name || member.email}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+        <div className="space-y-2 border-t pt-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assignment</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-[10px]">{assignedUser ? assignedUser.name?.[0] || assignedUser.email[0] : 'U'}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium">{assignedUser ? assignedUser.name || assignedUser.email : 'Unassigned'}</span>
             </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={isUpdating || !contactData} className="h-7 text-xs px-2">
+                  {assignedUser ? 'Transfer' : 'Assign'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Select Agent</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleAssignAgent(null)}>
+                  Unassigned
+                </DropdownMenuItem>
+                {teamMembers?.map((member) => (
+                  <DropdownMenuItem
+                    key={member.id}
+                    onClick={() => handleAssignAgent(member.id)}
+                    className={assignedUser?.id === member.id ? 'bg-accent font-medium' : ''}
+                  >
+                    {member.name || member.email}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
+        </div>
 
         {/* Tags Section */}
-        {contactData && (
-          <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                <TagIcon className="h-3 w-3" /> Tags
-              </p>
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <TagIcon className="h-3 w-3" /> Tags
+            </p>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
-                  <DropdownMenuLabel>Select Tags</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {allTags?.length === 0 ? (
-                    <div className="p-2 text-xs text-muted-foreground text-center">No tags available</div>
-                  ) : (
-                    allTags?.map((tag) => {
-                      const isSelected = currentTags.some((t) => t.id === tag.id);
-                      return (
-                        <DropdownMenuItem
-                          key={tag.id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleToggleTag(tag);
-                          }}
-                          className="flex items-center justify-between cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color || 'gray' }} />
-                            <span>{tag.name}</span>
-                          </div>
-                          {isSelected && <span className="text-xs font-bold">✓</span>}
-                        </DropdownMenuItem>
-                      );
-                    })
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {currentTags.length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">No tags added</span>
-              ) : (
-                currentTags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="outline"
-                    className="text-xs font-normal border-transparent hover:bg-opacity-80 transition-colors"
-                    style={{ backgroundColor: `${tag.color}20` || '#e2e8f0', color: tag.color || 'inherit' }}
-                  >
-                    {tag.name}
-                  </Badge>
-                ))
-              )}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating || !contactData}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
+                <DropdownMenuLabel>Select Tags</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {allTags?.length === 0 ? (
+                  <div className="p-2 text-xs text-muted-foreground text-center">No tags available</div>
+                ) : (
+                  allTags?.map((tag) => {
+                    const isSelected = currentTags.some((t) => t.id === tag.id);
+                    return (
+                      <DropdownMenuItem
+                        key={tag.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleToggleTag(tag);
+                        }}
+                        className="flex items-center justify-between cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color || 'gray' }} />
+                          <span>{tag.name}</span>
+                        </div>
+                        {isSelected && <span className="text-xs font-bold">✓</span>}
+                      </DropdownMenuItem>
+                    );
+                  })
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
+
+          <div className="flex flex-wrap gap-1.5">
+            {currentTags.length === 0 ? (
+              <span className="text-xs text-muted-foreground italic">No tags added</span>
+            ) : (
+              currentTags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-xs font-normal border-transparent hover:bg-opacity-80 transition-colors"
+                  style={{ backgroundColor: `${tag.color}20` || '#e2e8f0', color: tag.color || 'inherit' }}
+                >
+                  {tag.name}
+                </Badge>
+              ))
+            )}
+          </div>
+        </div>
 
         {/* Integration Details Section */}
         <div className="space-y-2 border-t pt-4">
