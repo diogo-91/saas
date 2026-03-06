@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, Suspense } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LogOut, Settings, MessageCircle, Menu, X } from 'lucide-react';
 import {
