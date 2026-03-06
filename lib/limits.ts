@@ -18,8 +18,9 @@ export async function enforceLimit(teamId: number, resource: LimitResource) {
     },
   });
 
+  // No plan = unlimited access to everything
   if (!team || !team.plan) {
-    throw new Error("Team has no active plan.");
+    return;
   }
 
   const plan = team.plan;
@@ -58,7 +59,8 @@ export async function checkFeature(teamId: number, feature: FeatureFlag) {
     },
   });
 
-  if (!team || !team.plan) return false;
+  // No plan = all features enabled
+  if (!team || !team.plan) return true;
 
   return team.plan[feature] === true;
 }
@@ -68,4 +70,13 @@ export async function enforceFeature(teamId: number, feature: FeatureFlag) {
   if (!hasAccess) {
     throw new Error("Your current plan does not allow access to this feature.");
   }
+}
+
+// Alias: check if team has any usage limits (false = unlimited)
+export async function hasActivePlan(teamId: number): Promise<boolean> {
+  const team = await db.query.teams.findFirst({
+    where: eq(teams.id, teamId),
+    with: { plan: true },
+  });
+  return !!(team?.plan);
 }
