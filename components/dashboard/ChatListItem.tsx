@@ -63,13 +63,13 @@ function formatLastMessageTime(timestamp: Date | string | null): string {
 
 function getMessagePreview(chat: Chat): { icon: React.ReactNode; text: string } {
   const text = chat.lastMessageText || '';
-  if (text.includes('[image]') || text.startsWith('data:image')) {
+  if (text.includes('[image]') || text.startsWith('data:image') || text.startsWith('📷')) {
     return { icon: <ImageIcon className="h-3 w-3 shrink-0" />, text: 'Photo' };
   }
-  if (text.includes('[audio]') || text.includes('[voice]')) {
+  if (text.includes('[audio]') || text.includes('[voice]') || text.startsWith('🎤')) {
     return { icon: <Mic className="h-3 w-3 shrink-0" />, text: 'Audio' };
   }
-  if (text.includes('[document]') || text.includes('[file]')) {
+  if (text.includes('[document]') || text.includes('[file]') || text.startsWith('📄')) {
     return { icon: <FileText className="h-3 w-3 shrink-0" />, text: 'Document' };
   }
   return { icon: null, text: text };

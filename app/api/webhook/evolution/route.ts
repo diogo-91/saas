@@ -240,8 +240,8 @@ export async function POST(request: Request) {
       let chatUpdateData: any = null;
 
       await db.transaction(async (tx) => {
-        const incrementValue = messageData.key.fromMe ? 0 : 1;
-        const isFromMe = messageData.key.fromMe;
+        const isFromMe = messageData.key.fromMe === true;
+        const incrementValue = isFromMe ? 0 : 1;
         const messageTimestamp = messageData.messageTimestamp ? new Date(messageData.messageTimestamp * 1000) : new Date();
         const messagePreview = getMessagePreview(messageData);
 

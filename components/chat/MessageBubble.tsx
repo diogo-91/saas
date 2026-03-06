@@ -5,6 +5,7 @@ import { Message } from './types';
 import { formatTime } from './utils';
 import { Check, CheckCheck, Clock, Image as ImageIcon, FileText, Mic, Reply, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CustomAudioPlayer } from '@/components/ui/custom-audio-player';
 
 interface MessageBubbleProps {
   msg: Message;
@@ -101,12 +102,14 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
 
     if (type === 'audioMessage') {
       return (
-        <div className="flex items-center gap-2 min-w-[160px]">
-          <Mic className="h-4 w-4 shrink-0" />
+        <div className="min-w-[220px]">
           {msg.mediaUrl ? (
-            <audio controls src={msg.mediaUrl} className="h-8 w-full max-w-[200px]" />
+            <CustomAudioPlayer src={msg.mediaUrl} isMe={isFromMe} />
           ) : (
-            <span className="text-xs opacity-70">Audio message</span>
+            <div className="flex items-center gap-2">
+              <Mic className="h-4 w-4 shrink-0" />
+              <span className="text-xs opacity-70">Audio message</span>
+            </div>
           )}
         </div>
       );
