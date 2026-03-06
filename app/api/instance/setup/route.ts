@@ -203,7 +203,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Fatal error in instance setup:', error.message);
+    console.error('[instance/setup] Fatal error:', error.message, error.stack);
     return NextResponse.json({ error: error.message || 'Internal server error.' }, { status: 500 });
   }
 }

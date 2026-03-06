@@ -163,11 +163,11 @@ function ConnectInstanceForm({ onSuccess, onCancel }: { onSuccess: () => void; o
             </TabsContent>
         </Tabs>
 
+     {error && (<p className="text-destructive text-center text-sm bg-destructive/10 p-3 rounded border border-destructive/30">{error}</p>)}
         <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>{t('cancel_btn')}</Button>
             <Button type="submit" disabled={isLoading}>{isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}{isLoading ? t('creating_instance_btn') : t('create_instance_btn')}</Button>
         </div>
-     {error && (<p className="text-destructive text-center mt-4 text-sm bg-destructive/10 p-2 rounded">{error}</p>)}
     </form>
   );
 }
