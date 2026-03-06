@@ -1,0 +1,157 @@
+'use client';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart3, TrendingUp, Users, Activity } from 'lucide-react';
+
+// ─── FunnelLineChart ────────────────────────────────────────────────────
+export function FunnelLineChart({ data }: { data: any[] }) {
+  const total = data?.length || 0;
+  return (
+    <Card className="col-span-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          Funnel Progression
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {total === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No funnel data available.</p>
+        ) : (
+          <div className="space-y-2">
+            {data.map((item: any, i: number) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-28 truncate">{item.stage || item.name || `Stage ${i + 1}`}</span>
+                <div className="flex-1 bg-muted rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (item.count / (data[0]?.count || 1)) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium w-8 text-right">{item.count || 0}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── FunnelRadarChart ────────────────────────────────────────────────────
+export function FunnelRadarChart({ data }: { data: any[] }) {
+  return (
+    <Card className="col-span-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          Stage Distribution
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!data || data.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No data available.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {data.map((item: any, i: number) => (
+              <div key={i} className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold text-primary">{item.count || 0}</p>
+                <p className="text-xs text-muted-foreground text-center mt-1">{item.stage || item.name || `Stage ${i + 1}`}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── AgentList ────────────────────────────────────────────────────────────
+export function AgentList({ data }: { data: any[] }) {
+  return (
+    <Card className="col-span-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Agent Performance
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!data || data.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No agent data available.</p>
+        ) : (
+          <div className="space-y-3">
+            {data.map((agent: any, i: number) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div>
+                  <p className="text-sm font-medium">{agent.name || `Agent ${i + 1}`}</p>
+                  <p className="text-xs text-muted-foreground">{agent.email || ''}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-primary">{agent.chatsHandled || agent.count || 0}</p>
+                  <p className="text-xs text-muted-foreground">chats</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── TrafficHeatmap ───────────────────────────────────────────────────────
+const HOURS = Array.from({ length: 24 }, (_, i) => `${i}h`);
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export function TrafficHeatmap({ data }: { data: any[] }) {
+  const maxVal = data?.reduce((max: number, item: any) => Math.max(max, item.count || 0), 1) || 1;
+
+  const getCell = (day: number, hour: number) => {
+    const found = data?.find((d: any) => d.day === day && d.hour === hour);
+    return found?.count || 0;
+  };
+
+  const getOpacity = (count: number) => Math.max(0.05, count / maxVal);
+
+  return (
+    <Card className="col-span-4">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          Message Traffic Heatmap
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!data || data.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No traffic data available.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="inline-grid gap-1" style={{ gridTemplateColumns: `40px repeat(24, 18px)` }}>
+              <div />
+              {HOURS.map((h) => (
+                <div key={h} className="text-[9px] text-muted-foreground text-center">{h}</div>
+              ))}
+              {DAYS.map((day, dayIdx) => (
+                <>
+                  <div key={`day-${dayIdx}`} className="text-[10px] text-muted-foreground flex items-center">{day}</div>
+                  {HOURS.map((_, hourIdx) => {
+                    const count = getCell(dayIdx, hourIdx);
+                    return (
+                      <div
+                        key={`${dayIdx}-${hourIdx}`}
+                        className="h-4 w-4 rounded-sm"
+                        style={{ backgroundColor: `hsl(var(--primary) / ${getOpacity(count)})` }}
+                        title={`${day} ${hourIdx}h: ${count} messages`}
+                      />
+                    );
+                  })}
+                </>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
