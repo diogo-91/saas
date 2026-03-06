@@ -217,9 +217,10 @@ function InstanceCard({ details, mutateDetails }: { details: InstanceDetailItem;
       if (!teamId || !process.env.NEXT_PUBLIC_PUSHER_KEY) return;
       const soketiHost = process.env.NEXT_PUBLIC_PUSHER_HOST;
       const pusherClient = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
         ...(soketiHost
-          ? { wsHost: soketiHost, wsPort: 443, wssPort: 443, forceTLS: true, enabledTransports: ['ws', 'wss'] as any }
-          : { cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'us2' }
+          ? { wsHost: soketiHost, wsPort: 443, wssPort: 443, forceTLS: true, enabledTransports: ['ws', 'wss'] as any, disableStats: true }
+          : {}
         ),
       });
       const channelName = `team-${teamId}`;
