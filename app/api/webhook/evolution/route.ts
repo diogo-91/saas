@@ -10,6 +10,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { processAutomation } from '@/lib/automation/engine';
 import { processAIMessage } from '@/lib/plugins/ai-chat/service';
 
+// Optional: forward all events to an external webhook (e.g. n8n)
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
+
+function forwardToN8n(body: any) {
+  if (!N8N_WEBHOOK_URL) return;
+  fetch(N8N_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch((err) => console.warn('[webhook] n8n forward failed:', err.message));
+}
+
 function normalizeJid(jid: string): string {
     if (!jid) return '';
     if (jid.includes('@s.whatsapp.net')) {
@@ -183,8 +195,12 @@ async function sendAiTextMessage(instance: any, remoteJid: string, text: string,
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    // Forward raw event to n8n (fire-and-forget, does not block processing)
+    forwardToN8n(body);
+
     const instanceName = body.instance;
-    
+
     if (!instanceName) {
       return NextResponse.json({ error: 'Instance name missing' }, { status: 400 });
     }
@@ -207,7 +223,7 @@ export async function POST(request: Request) {
     const metaToken = instance.metaToken;
     const pusherChannel = `team-${teamId}`;
     
-    if (body.event === 'messages.upsert' && body.data) {
+    if ((body.event === 'messages.upsert' || body.event === 'send.message') && body.data) {
       const messageData = body.data;
       if (!messageData.key) {
           return NextResponse.json({ received_with_error: 'invalid message structure' });

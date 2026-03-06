@@ -27,8 +27,8 @@ export default function ChatPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const chatNumber = params.jid as string;
-  const instanceIdParam = searchParams.get('instanceId'); 
-  
+  const instanceIdParam = searchParams.get('instanceId');
+
   const remoteJid = chatNumber ? `${chatNumber}@s.whatsapp.net` : null;
 
   const activeChatRef = useRef<Chat | undefined>(undefined);
@@ -54,42 +54,42 @@ export default function ChatPage() {
   const audioPlayerRef = useRef<HTMLAudioElement>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const { data: user } = useSWR<UserData>('/api/user', fetcher);
   const { data: teamData } = useSWR<TeamData>('/api/team', fetcher);
   const teamId = teamData?.id;
-  
+
   const { data: chats } = useSWR<Chat[]>('/api/chats', fetcher);
 
   const currentChat = useMemo(() => {
-      if (!chats || !remoteJid) return undefined;
-      if (instanceIdParam) {
-          return chats.find(c => c.remoteJid === remoteJid && c.instanceId === parseInt(instanceIdParam));
-      }
+    if (!chats || !remoteJid) return undefined;
+    if (instanceIdParam) {
+      return chats.find(c => c.remoteJid === remoteJid && c.instanceId === parseInt(instanceIdParam));
+    }
 
-      return chats.find(c => c.remoteJid === remoteJid);
+    return chats.find(c => c.remoteJid === remoteJid);
   }, [chats, remoteJid, instanceIdParam]);
 
   const swrKey = useMemo(() => {
-      if (!remoteJid) return null;
-      
-      if (instanceIdParam) {
-          return `/api/messages?jid=${remoteJid}&instanceId=${instanceIdParam}`;
-      }
-      if (currentChat?.id) {
-           return `/api/messages?chatId=${currentChat.id}`;
-      }
+    if (!remoteJid) return null;
 
-      return `/api/messages?jid=${remoteJid}`;
+    if (instanceIdParam) {
+      return `/api/messages?jid=${remoteJid}&instanceId=${instanceIdParam}`;
+    }
+    if (currentChat?.id) {
+      return `/api/messages?chatId=${currentChat.id}`;
+    }
+
+    return `/api/messages?jid=${remoteJid}`;
   }, [remoteJid, instanceIdParam, currentChat]);
 
   const { data: messages, error, isLoading, mutate: mutateMessages } = useSWR<Message[]>(swrKey, fetcher, { revalidateOnFocus: true });
-  
+
   const { data: contact } = useSWR<ContactData | null>(
     remoteJid ? `/api/contacts/by-chat?jid=${remoteJid}` : null,
     fetcher
   );
-  
+
   useEffect(() => {
     activeChatRef.current = currentChat;
   }, [currentChat]);
@@ -165,7 +165,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!teamId || !remoteJid || !process.env.NEXT_PUBLIC_PUSHER_KEY) return;
-    
+
     const soketiHost = process.env.NEXT_PUBLIC_PUSHER_HOST;
     const pusherClient = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'mt1',
@@ -176,7 +176,7 @@ export default function ChatPage() {
     });
     const channelName = `team-${teamId}`;
     const channel = pusherClient.subscribe(channelName);
-    
+
     channel.bind('new-message', (payload: NewMessagePayload) => {
       const activeChat = activeChatRef.current;
       const instanceMatch = !activeChat?.instanceId || !payload.instanceId || activeChat.instanceId === payload.instanceId;
@@ -199,12 +199,12 @@ export default function ChatPage() {
       const currentId = activeChatRef.current?.id;
 
       if (currentId && payload.chatId === currentId) {
-          if (payload.type === 'ai') {
-              globalMutate(`/api/chats/${payload.chatId}/ai-status`);
-          }
-          if (payload.type === 'automation') {
-              globalMutate(`/api/chats/${payload.chatId}/session`);
-          }
+        if (payload.type === 'ai') {
+          globalMutate(`/api/chats/${payload.chatId}/ai-status`);
+        }
+        if (payload.type === 'automation') {
+          globalMutate(`/api/chats/${payload.chatId}/session`);
+        }
       }
     });
 
@@ -302,12 +302,12 @@ export default function ChatPage() {
     try {
       const response = await fetch('/api/messages/send', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            recipientJid: remoteJid, 
-            text: textToSend, 
-            quotedMessageData: quotedData, 
-            isInternal: isInternalNote,
-            instanceId: currentChat?.instanceId 
+        body: JSON.stringify({
+          recipientJid: remoteJid,
+          text: textToSend,
+          quotedMessageData: quotedData,
+          isInternal: isInternalNote,
+          instanceId: currentChat?.instanceId
         }),
       });
       const sentMessageData: Message = await response.json();
@@ -335,16 +335,16 @@ export default function ChatPage() {
     const timer = setTimeout(() => scrollToBottom(), 100);
     try {
       const audioBase64 = await fileToBase64(audioBlob);
-      const response = await fetch('/api/messages/sendAudio', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ 
-              recipientJid: remoteJid, 
-              audioBase64, 
-              audioMimeType, 
-              quotedMessageData: quotedData,
-              instanceId: currentChat?.instanceId 
-          }), 
+      const response = await fetch('/api/messages/sendAudio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientJid: remoteJid,
+          audioBase64,
+          audioMimeType,
+          quotedMessageData: quotedData,
+          instanceId: currentChat?.instanceId
+        }),
       });
       const sentMessageData: Message = await response.json();
       if (!response.ok) throw new Error((sentMessageData as any).error || 'Failed to send audio.');
@@ -360,80 +360,80 @@ export default function ChatPage() {
   const handleSendAttachment = async (file: File) => {
     if (!remoteJid) return;
     const tempMediaUrl = URL.createObjectURL(file);
-    const messageToQuote = quotedMessage; 
+    const messageToQuote = quotedMessage;
     setQuotedMessage(null);
-    
+
     const tempId = `temp_media_${Date.now()}`;
     const mimeType = file.type;
     const fileName = file.name;
     const messageType = mimeType.startsWith('image/') || mimeType.startsWith('video/') ? 'imageMessage' : 'documentMessage';
-    
+
     let quotedData: any = null;
-    if (messageToQuote) { 
-        quotedData = { 
-            id: messageToQuote.id, 
-            text: messageToQuote.text || messageToQuote.mediaCaption, 
-            messageType: messageToQuote.messageType, 
-            mediaUrl: messageToQuote.mediaUrl, 
-            mediaMimetype: messageToQuote.mediaMimetype 
-        }; 
+    if (messageToQuote) {
+      quotedData = {
+        id: messageToQuote.id,
+        text: messageToQuote.text || messageToQuote.mediaCaption,
+        messageType: messageToQuote.messageType,
+        mediaUrl: messageToQuote.mediaUrl,
+        mediaMimetype: messageToQuote.mediaMimetype
+      };
     }
 
     const optimisticMessage: Message = {
-        id: tempId, 
-        chatId: currentChat?.id || 0, 
-        fromMe: true, 
-        messageType: messageType, 
-        text: messageType === 'documentMessage' ? fileName : null, 
-        timestamp: new Date().toISOString(), 
-        mediaUrl: tempMediaUrl, 
-        mediaMimetype: mimeType, 
-        mediaCaption: null, 
-        status: 'sent', 
-        quotedMessageId: messageToQuote?.id, 
-        quotedMessageText: quotedData ? JSON.stringify(quotedData) : null, 
-        isAi: false, 
-        isAutomation: false
+      id: tempId,
+      chatId: currentChat?.id || 0,
+      fromMe: true,
+      messageType: messageType,
+      text: messageType === 'documentMessage' ? fileName : null,
+      timestamp: new Date().toISOString(),
+      mediaUrl: tempMediaUrl,
+      mediaMimetype: mimeType,
+      mediaCaption: null,
+      status: 'sent',
+      quotedMessageId: messageToQuote?.id,
+      quotedMessageText: quotedData ? JSON.stringify(quotedData) : null,
+      isAi: false,
+      isAutomation: false
     };
 
     mutateMessages((currentMessages = []) => [...currentMessages, optimisticMessage], false);
     const timer = setTimeout(() => scrollToBottom(), 100);
 
     try {
-        const fileBase64 = await fileToBase64(file);
-        const response = await fetch('/api/messages/sendMedia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                recipientJid: remoteJid,
-                fileBase64,
-                mimeType,
-                fileName,
-                quotedMessageData: quotedData,
-                instanceId: currentChat?.instanceId
-            }),
-        });
-        
-        const sentMessageData: Message = await response.json();
-        if (!response.ok) throw new Error((sentMessageData as any).error || 'Failed to send media.');
-        
-        mutateMessages((currentMessages = []) => currentMessages.map(msg => msg.id === tempId ? { ...sentMessageData, timestamp: new Date(sentMessageData.timestamp).toISOString() } : msg), false);
-        globalMutate('/api/chats');
+      const fileBase64 = await fileToBase64(file);
+      const response = await fetch('/api/messages/sendMedia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientJid: remoteJid,
+          fileBase64,
+          mimeType,
+          fileName,
+          quotedMessageData: quotedData,
+          instanceId: currentChat?.instanceId
+        }),
+      });
+
+      const sentMessageData: Message = await response.json();
+      if (!response.ok) throw new Error((sentMessageData as any).error || 'Failed to send media.');
+
+      mutateMessages((currentMessages = []) => currentMessages.map(msg => msg.id === tempId ? { ...sentMessageData, timestamp: new Date(sentMessageData.timestamp).toISOString() } : msg), false);
+      globalMutate('/api/chats');
     } catch (sendError: any) {
-        mutateMessages((currentMessages = []) => currentMessages.filter(msg => msg.id !== tempId), false);
-        setQuotedMessage(messageToQuote);
-        toast.error(`Error sending file: ${sendError.message}`);
+      mutateMessages((currentMessages = []) => currentMessages.filter(msg => msg.id !== tempId), false);
+      setQuotedMessage(messageToQuote);
+      toast.error(`Error sending file: ${sendError.message}`);
     } finally {
-        clearTimeout(timer);
-        URL.revokeObjectURL(tempMediaUrl);
+      clearTimeout(timer);
+      URL.revokeObjectURL(tempMediaUrl);
     }
   };
 
   const handleFileIconClick = (acceptType: string) => {
-      if (fileInputRef.current) {
-          fileInputRef.current.accept = acceptType;
-          fileInputRef.current.click();
-      }
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = acceptType;
+      fileInputRef.current.click();
+    }
   };
 
   const onEmojiClick = (emojiData: EmojiClickData) => { setNewMessage(prev => prev + emojiData.emoji); };
@@ -499,33 +499,33 @@ export default function ChatPage() {
     }
 
     return filteredMessages.map((msg, index) => {
-        const currentDate = new Date(msg.timestamp);
-        let showSeparator = false;
-        let dateLabel = '';
+      const currentDate = new Date(msg.timestamp);
+      let showSeparator = false;
+      let dateLabel = '';
 
-        if (index === 0) {
-            showSeparator = true;
-            dateLabel = formatDateSeparator(currentDate);
-        } else {
-            const prevMsg = filteredMessages[index - 1];
-            const prevDate = new Date(prevMsg.timestamp);
-            if (!isSameDay(currentDate, prevDate)) {
-                showSeparator = true;
-                dateLabel = formatDateSeparator(currentDate);
-            }
+      if (index === 0) {
+        showSeparator = true;
+        dateLabel = formatDateSeparator(currentDate);
+      } else {
+        const prevMsg = filteredMessages[index - 1];
+        const prevDate = new Date(prevMsg.timestamp);
+        if (!isSameDay(currentDate, prevDate)) {
+          showSeparator = true;
+          dateLabel = formatDateSeparator(currentDate);
         }
+      }
 
-        return (
-            <React.Fragment key={msg.id}>
-                {showSeparator && <DateSeparator date={currentDate} label={dateLabel} />}
-                <MessageBubble 
-                    msg={msg} 
-                    onMediaClick={handleMediaClick} 
-                    onReply={setQuotedMessage} 
-                    searchQuery={searchQuery} 
-                />
-            </React.Fragment>
-        );
+      return (
+        <React.Fragment key={msg.id}>
+          {showSeparator && <DateSeparator date={currentDate} label={dateLabel} />}
+          <MessageBubble
+            msg={msg}
+            onMediaClick={handleMediaClick}
+            onReply={setQuotedMessage}
+            searchQuery={searchQuery}
+          />
+        </React.Fragment>
+      );
     });
   };
 
@@ -582,10 +582,14 @@ export default function ChatPage() {
         </footer>
       </div>
 
-      <ChatSidebar chatDetails={chatDetails} />
+      <ChatSidebar
+        chatDetails={chatDetails}
+        contactData={contact}
+        onContactUpdate={() => globalMutate(remoteJid ? `/api/contacts/by-chat?jid=${remoteJid}` : null)}
+      />
 
       <QuickRepliesModal open={quickRepliesOpen} onOpenChange={setQuickRepliesOpen} />
-      
+
       <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={slides} index={lightboxIndex} plugins={[Zoom, Video]} zoom={{ maxZoomPixelRatio: 3, doubleTapDelay: 300 }} />
     </div>
   );

@@ -1,20 +1,34 @@
-'use client';
-
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, User, Phone, Clock } from 'lucide-react';
-import { ChatDetails } from './types';
+import { ChevronLeft, ChevronRight, User, Phone, Clock, Tag as TagIcon, Plus } from 'lucide-react';
+import { ChatDetails, ContactData, Tag, UserData } from './types';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
 interface ChatSidebarProps {
   chatDetails: ChatDetails;
+  contactData?: ContactData | null;
+  onContactUpdate?: () => void;
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function ChatSidebar({ chatDetails }: ChatSidebarProps) {
+export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const { data: teamMembers } = useSWR<UserData[]>('/api/team/members', fetcher);
+  const { data: allTags } = useSWR<Tag[]>('/api/tags', fetcher);
 
   const phone = chatDetails.remoteJid?.split('@')[0] || '';
   const initials = chatDetails.name
@@ -27,6 +41,59 @@ export function ChatSidebar({ chatDetails }: ChatSidebarProps) {
   const lastInteraction = chatDetails.lastCustomerInteraction
     ? new Date(chatDetails.lastCustomerInteraction).toLocaleString()
     : 'N/A';
+
+  const assignedUser = contactData?.assignedUser;
+  const currentTags = contactData?.tags || [];
+
+  const handleAssignAgent = async (agentId: number | null) => {
+    if (!contactData?.id) return;
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/contacts/${contactData.id}/assign-agent`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId }),
+      });
+      if (!res.ok) throw new Error('Failed to assign agent');
+      toast.success(agentId ? 'Agent assigned successfully' : 'Agent unassigned');
+      if (onContactUpdate) onContactUpdate();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleToggleTag = async (tag: Tag) => {
+    if (!contactData?.id) return;
+    setIsUpdating(true);
+
+    const hasTag = currentTags.some((t) => t.id === tag.id);
+
+    try {
+      let res;
+      if (hasTag) {
+        res = await fetch(`/api/contacts/${contactData.id}/tags/${tag.id}`, {
+          method: 'DELETE',
+        });
+      } else {
+        res = await fetch(`/api/contacts/${contactData.id}/tags`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tagId: tag.id }),
+        });
+      }
+
+      if (!res.ok) throw new Error(`Failed to ${hasTag ? 'remove' : 'add'} tag`);
+      toast.success(`Tag ${hasTag ? 'removed' : 'added'} successfully`);
+      if (onContactUpdate) onContactUpdate();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
 
   if (collapsed) {
     return (
@@ -57,7 +124,7 @@ export function ChatSidebar({ chatDetails }: ChatSidebarProps) {
         </Button>
       </div>
 
-      <div className="flex flex-col items-center p-6 border-b">
+      <div className="flex flex-col items-center p-6 border-b min-h-[180px]">
         <Avatar className="h-20 w-20 mb-3">
           <AvatarImage src={chatDetails.profilePicUrl || undefined} />
           <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
@@ -68,7 +135,8 @@ export function ChatSidebar({ chatDetails }: ChatSidebarProps) {
         <p className="text-sm text-muted-foreground">{phone}</p>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-6">
+        {/* Contact Details Section */}
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -84,13 +152,114 @@ export function ChatSidebar({ chatDetails }: ChatSidebarProps) {
               <p className="text-sm font-medium">{lastInteraction}</p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Integration</p>
-              <p className="text-sm font-medium">{chatDetails.integration}</p>
+        </div>
+
+        {/* Assignment Section */}
+        {contactData && (
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assignment</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-[10px]">{assignedUser ? assignedUser.name?.[0] || assignedUser.email[0] : 'U'}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium">{assignedUser ? assignedUser.name || assignedUser.email : 'Unassigned'}</span>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2">
+                    {assignedUser ? 'Transfer' : 'Assign'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Select Agent</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleAssignAgent(null)}>
+                    Unassigned
+                  </DropdownMenuItem>
+                  {teamMembers?.map((member) => (
+                    <DropdownMenuItem
+                      key={member.id}
+                      onClick={() => handleAssignAgent(member.id)}
+                      className={assignedUser?.id === member.id ? 'bg-accent font-medium' : ''}
+                    >
+                      {member.name || member.email}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
+        )}
+
+        {/* Tags Section */}
+        {contactData && (
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <TagIcon className="h-3 w-3" /> Tags
+              </p>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
+                  <DropdownMenuLabel>Select Tags</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {allTags?.length === 0 ? (
+                    <div className="p-2 text-xs text-muted-foreground text-center">No tags available</div>
+                  ) : (
+                    allTags?.map((tag) => {
+                      const isSelected = currentTags.some((t) => t.id === tag.id);
+                      return (
+                        <DropdownMenuItem
+                          key={tag.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleToggleTag(tag);
+                          }}
+                          className="flex items-center justify-between cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color || 'gray' }} />
+                            <span>{tag.name}</span>
+                          </div>
+                          {isSelected && <span className="text-xs font-bold">✓</span>}
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {currentTags.length === 0 ? (
+                <span className="text-xs text-muted-foreground italic">No tags added</span>
+              ) : (
+                currentTags.map((tag) => (
+                  <Badge
+                    key={tag.id}
+                    variant="outline"
+                    className="text-xs font-normal border-transparent hover:bg-opacity-80 transition-colors"
+                    style={{ backgroundColor: `${tag.color}20` || '#e2e8f0', color: tag.color || 'inherit' }}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Integration Details Section */}
+        <div className="space-y-2 border-t pt-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Integration</p>
+          <p className="text-sm font-medium">{chatDetails.integration}</p>
         </div>
       </div>
     </aside>

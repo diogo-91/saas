@@ -46,10 +46,20 @@ export interface ChatDetails {
   integration: string;
 }
 
+export interface Tag {
+  id: number;
+  teamId: number;
+  name: string;
+  color: string | null;
+  createdAt: string;
+}
+
 export interface ContactData {
   id?: number;
   name: string;
   notes?: string | null;
+  tags?: Tag[];
+  assignedUser?: Pick<UserData, 'id' | 'name' | 'email'> | null;
 }
 
 export interface TeamData {
