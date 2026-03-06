@@ -10,8 +10,9 @@ if (!process.env.POSTGRES_URL) {
 }
 
 const isSupabase = process.env.POSTGRES_URL?.includes('supabase');
+const isServerless = process.env.VERCEL === '1';
 export const client = postgres(process.env.POSTGRES_URL, {
   ssl: isSupabase ? 'require' : false,
-  max: 1, // Necessário para ambientes serverless (Vercel)
+  max: isServerless ? 1 : 10, // 1 para serverless, 10 para VPS
 });
 export const db = drizzle(client, { schema });
