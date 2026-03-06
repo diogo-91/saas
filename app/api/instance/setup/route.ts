@@ -6,7 +6,9 @@ import { logActivity } from '@/lib/db/activity';
 import { enforceLimit } from '@/lib/limits';
 
 const MASTER_API_KEY = process.env.AUTHENTICATION_API_KEY;
-const YOUR_PUBLIC_WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL;
+// Use full webhook path; fall back to base URL + path if only base is set
+const YOUR_PUBLIC_WEBHOOK_URL = process.env.NEXT_PUBLIC_EVOLUTION_WEBHOOK_URL
+  || (process.env.NEXT_PUBLIC_WEBHOOK_URL ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhook/evolution` : undefined);
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 
 const WEBHOOK_EVENTS = [
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
         throw new Error("AUTHENTICATION_API_KEY is not configured on the server.");
     }
     if (!YOUR_PUBLIC_WEBHOOK_URL) {
-        throw new Error("Webhook URL (NEXT_PUBLIC_WEBHOOK_URL) is not defined.");
+        throw new Error("Webhook URL (NEXT_PUBLIC_EVOLUTION_WEBHOOK_URL) is not defined.");
     }
     
     const user = await getUser();
