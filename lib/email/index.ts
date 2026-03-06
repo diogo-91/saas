@@ -1,19 +1,30 @@
 import { Resend } from 'resend';
-import { useBranding } from '@/providers/branding-provider';
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Lazy initialization - only create Resend instance when API key is available
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function sendInvitationEmail(email: string, teamName: string, inviteId: number) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn('RESEND_API_KEY not configured. Skipping invitation email.');
+    return;
+  }
+
   const inviteLink = `${process.env.BASE_URL}/sign-up?inviteId=${inviteId}`;
-  const { branding } = useBranding();
+  const appName = 'WhatsSaaS';
+
   try {
     await resend.emails.send({
-      from: `${branding?.name || 'WhatSaaS'} <onboarding@resend.dev>`,
+      from: `${appName} <onboarding@resend.dev>`,
       to: email,
-      subject: `Invitation to join ${teamName} on ${branding?.name || 'WhatSaaS'}`,
+      subject: `Invitation to join ${teamName} on ${appName}`,
       html: `
         <div style="font-family: sans-serif; font-size: 16px; line-height: 1.6;">
           <h2>You've been invited!</h2>
-          <p>You have been invited to join the team <strong>${teamName}</strong> on ${branding?.name || 'WhatSaaS'}.</p>
+          <p>You have been invited to join the team <strong>${teamName}</strong> on ${appName}.</p>
           <p>Click the link below to accept the invitation and set up your account:</p>
           <p>
             <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #44A64D; color: white; text-decoration: none; border-radius: 5px;">
@@ -29,6 +40,6 @@ export async function sendInvitationEmail(email: string, teamName: string, invit
     });
   } catch (error) {
     console.error('Failed to send email:', error);
-    throw new Error('Failed to send invitation email');
+    // Don't throw - email failure shouldn't break the invitation flow
   }
 }
