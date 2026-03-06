@@ -2,10 +2,12 @@
 nixPkgs = ['ffmpeg', 'nodejs_22']
 
 [phases.install]
-cmds = ['npm install -g pnpm@10.30.3', 'pnpm install']
+# Instala pnpm e usa na mesma camada Docker (mesmo RUN)
+cmds = ['npm install -g pnpm@10.30.3 && pnpm install']
 
 [phases.build]
-cmds = ['pnpm build']
+# Usa o next diretamente do node_modules (sem precisar do pnpm no PATH)
+cmds = ['node_modules/.bin/next build']
 
 [start]
-cmd = 'pnpm start'
+cmd = 'node_modules/.bin/next start'
