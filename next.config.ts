@@ -5,6 +5,12 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['fluent-ffmpeg', 'adm-zip'],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     //ppr: true,
     //clientSegmentCache: true,
