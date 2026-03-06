@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Loader2 } from 'lucide-react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
 import PusherClient from 'pusher-js';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ import { DateSeparator } from '@/components/chat/DateSeparator';
 export default function ChatPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const chatNumber = params.jid as string;
   const instanceIdParam = searchParams.get('instanceId'); 
   
@@ -177,7 +178,8 @@ export default function ChatPage() {
     const channel = pusherClient.subscribe(channelName);
     
     channel.bind('new-message', (payload: NewMessagePayload) => {
-      const instanceMatch = !currentChat?.instanceId || !payload.instanceId || currentChat.instanceId === payload.instanceId;
+      const activeChat = activeChatRef.current;
+      const instanceMatch = !activeChat?.instanceId || !payload.instanceId || activeChat.instanceId === payload.instanceId;
 
       if (payload.remoteJid === remoteJid && instanceMatch) {
         mutateMessages((currentMessages = []) => {
@@ -188,14 +190,14 @@ export default function ChatPage() {
         setTimeout(() => scrollToBottom(), 150);
       }
     });
-    
+
     channel.bind('message-status-update', (payload: { messageId: string; status: 'sent' | 'delivered' | 'read' }) => {
       mutateMessages((currentMessages = []) => currentMessages.map(msg => msg.id === payload.messageId ? { ...msg, status: payload.status } : msg), false);
     });
 
     channel.bind('chat-status-update', (payload: { chatId: number; type: 'ai' | 'automation'; status: string }) => {
       const currentId = activeChatRef.current?.id;
-      
+
       if (currentId && payload.chatId === currentId) {
           if (payload.type === 'ai') {
               globalMutate(`/api/chats/${payload.chatId}/ai-status`);
@@ -207,7 +209,7 @@ export default function ChatPage() {
     });
 
     return () => { pusherClient.unsubscribe(channelName); pusherClient.disconnect(); };
-  }, [teamId, remoteJid, mutateMessages, scrollToBottom, globalMutate, currentChat]); 
+  }, [teamId, remoteJid, mutateMessages, scrollToBottom, globalMutate]);
 
   useEffect(() => {
     if (messages && remoteJid && teamId) {
@@ -427,14 +429,53 @@ export default function ChatPage() {
     }
   };
 
-  const handleFileIconClick = (acceptType: string) => { 
-      if (fileInputRef.current) { 
-          fileInputRef.current.accept = acceptType; 
-          fileInputRef.current.click(); 
-      } 
+  const handleFileIconClick = (acceptType: string) => {
+      if (fileInputRef.current) {
+          fileInputRef.current.accept = acceptType;
+          fileInputRef.current.click();
+      }
   };
-  
+
   const onEmojiClick = (emojiData: EmojiClickData) => { setNewMessage(prev => prev + emojiData.emoji); };
+
+  const handleCloseChat = async () => {
+    if (!currentChat?.id) return;
+    try {
+      const res = await fetch(`/api/chats/${currentChat.id}/close`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to close chat');
+      toast.success('Conversation closed');
+      globalMutate('/api/chats');
+      mutateMessages();
+    } catch (e: any) {
+      toast.error(e.message || 'Error closing conversation');
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!currentChat?.id) return;
+    try {
+      const res = await fetch('/api/chats/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatIds: [currentChat.id] }),
+      });
+      if (!res.ok) throw new Error('Failed to delete chat');
+      toast.success('Chat deleted');
+      globalMutate('/api/chats');
+      router.push('/dashboard');
+    } catch (e: any) {
+      toast.error(e.message || 'Error deleting chat');
+    }
+  };
+
+  const handleMarkUnread = () => {
+    if (!currentChat?.id) return;
+    // Optimistic local update (visual indicator until next message arrives)
+    globalMutate('/api/chats', (currentData: Chat[] | undefined = []) =>
+      currentData.map(chat => chat.id === currentChat.id ? { ...chat, unreadCount: 1 } : chat), false
+    );
+    toast.success('Marked as unread');
+  };
 
   const renderReplyPreview = () => {
     if (!quotedMessage) return null;
@@ -494,10 +535,14 @@ export default function ChatPage() {
 
         <ChatHeader
           chatDetails={chatDetails}
+          chatId={currentChat?.id}
           showSearch={showSearch}
           setShowSearch={setShowSearch}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          onCloseChat={currentChat ? handleCloseChat : undefined}
+          onDeleteChat={currentChat ? handleDeleteChat : undefined}
+          onMarkUnread={currentChat ? handleMarkUnread : undefined}
         />
 
         <main className="flex-1 overflow-y-auto p-4 space-y-1 bg-muted">

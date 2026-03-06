@@ -4,24 +4,52 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, X, Phone, MoreVertical } from 'lucide-react';
+import { Search, X, MoreVertical, CheckCheck, Trash2, XCircle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ChatDetails } from './types';
 
 interface ChatHeaderProps {
   chatDetails: ChatDetails;
+  chatId?: number;
   showSearch: boolean;
   setShowSearch: (show: boolean) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  onCloseChat?: () => Promise<void>;
+  onDeleteChat?: () => Promise<void>;
+  onMarkUnread?: () => void;
 }
 
 export function ChatHeader({
   chatDetails,
+  chatId,
   showSearch,
   setShowSearch,
   searchQuery,
   setSearchQuery,
+  onCloseChat,
+  onDeleteChat,
+  onMarkUnread,
 }: ChatHeaderProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const initials = chatDetails.name
     .split(' ')
     .map((w) => w[0])
@@ -29,66 +57,141 @@ export function ChatHeader({
     .join('')
     .toUpperCase();
 
-  return (
-    <header className="flex items-center justify-between px-4 py-3 border-b bg-background h-[72px] shrink-0">
-      {showSearch ? (
-        <div className="flex items-center gap-2 flex-1">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Input
-            autoFocus
-            placeholder="Search messages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="border-none shadow-none focus-visible:ring-0 h-8 p-0"
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={() => {
-              setShowSearch(false);
-              setSearchQuery('');
-            }}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-3 min-w-0">
-            <Avatar className="h-10 w-10 shrink-0">
-              <AvatarImage src={chatDetails.profilePicUrl || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{chatDetails.name}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {chatDetails.remoteJid?.split('@')[0]}
-              </p>
-            </div>
-          </div>
+  const handleCloseChat = async () => {
+    if (!onCloseChat) return;
+    setIsLoading(true);
+    try {
+      await onCloseChat();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-          <div className="flex items-center gap-1 shrink-0">
+  const handleDeleteChat = async () => {
+    if (!onDeleteChat) return;
+    setIsLoading(true);
+    try {
+      await onDeleteChat();
+    } finally {
+      setIsLoading(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <header className="flex items-center justify-between px-4 py-3 border-b bg-background h-[72px] shrink-0">
+        {showSearch ? (
+          <div className="flex items-center gap-2 flex-1">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              autoFocus
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="border-none shadow-none focus-visible:ring-0 h-8 p-0"
+            />
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-muted-foreground"
-              onClick={() => setShowSearch(true)}
+              className="h-8 w-8 shrink-0"
+              onClick={() => {
+                setShowSearch(false);
+                setSearchQuery('');
+              }}
             >
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-muted-foreground"
-            >
-              <MoreVertical className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
-        </>
-      )}
-    </header>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-10 w-10 shrink-0">
+                <AvatarImage src={chatDetails.profilePicUrl || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">{chatDetails.name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {chatDetails.remoteJid?.split('@')[0]}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground"
+                onClick={() => setShowSearch(true)}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground"
+                    disabled={isLoading}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  {onMarkUnread && (
+                    <DropdownMenuItem onClick={onMarkUnread}>
+                      <CheckCheck className="h-4 w-4 mr-2" />
+                      Mark as unread
+                    </DropdownMenuItem>
+                  )}
+                  {onCloseChat && (
+                    <DropdownMenuItem onClick={handleCloseChat}>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Close conversation
+                    </DropdownMenuItem>
+                  )}
+                  {onDeleteChat && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeleteDialogOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete chat
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </>
+        )}
+      </header>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all messages with {chatDetails.name}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteChat}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
