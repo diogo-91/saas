@@ -23,6 +23,13 @@ export async function middleware(request: NextRequest) {
   const pathWithoutLocale = pathname.replace(/^\/(pt|en|es)/, '') || '/';
   const isProtectedRoute = protectedRoutes.some(route => pathWithoutLocale.startsWith(route));
 
+  if (pathWithoutLocale === '/') {
+    if (sessionCookie) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.redirect(new URL('/sign-in', request.url));
+  }
+
   if (isProtectedRoute && !sessionCookie) {
     return NextResponse.redirect(new URL(`/${locale}/sign-in`, request.url));
   }

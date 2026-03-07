@@ -386,7 +386,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (isLoading) return <ChatListSkeleton />;
     if (error) return <div className="p-4 text-center text-destructive text-sm">Erro ao carregar conversas.</div>;
     if (!validChats || validChats.length === 0) {
-      if (searchQuery || activeTab === 'unread' || detailedFilters.funnelStageId || detailedFilters.instanceId) {
+      if (searchQuery || activeTab === 'unread' || detailedFilters.funnelStageId || detailedFilters.instanceId || detailedFilters.agentId || detailedFilters.tagId) {
         return <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma conversa encontrada.</div>;
       }
       return <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma conversa iniciada.</div>;
