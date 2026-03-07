@@ -45,11 +45,34 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
   const assignedUser = contactData?.assignedUser;
   const currentTags = contactData?.tags || [];
 
+  const getOrCreateContactId = async () => {
+    if (contactData?.id) return contactData.id;
+
+    const res = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jid: chatDetails.remoteJid,
+        name: chatDetails.name,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to initialize contact');
+    }
+
+    const newContact = await res.json();
+    return newContact.id;
+  };
+
   const handleAssignAgent = async (agentId: number | null) => {
-    if (!contactData?.id) return;
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/contacts/${contactData.id}/assign-agent`, {
+      const contactId = await getOrCreateContactId();
+      if (!contactId) throw new Error('Could not obtain contact record');
+
+      const res = await fetch(`/api/contacts/${contactId}/assign-agent`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId }),
@@ -65,19 +88,21 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
   };
 
   const handleToggleTag = async (tag: Tag) => {
-    if (!contactData?.id) return;
     setIsUpdating(true);
 
     const hasTag = currentTags.some((t) => t.id === tag.id);
 
     try {
+      const contactId = await getOrCreateContactId();
+      if (!contactId) throw new Error('Could not obtain contact record');
+
       let res;
       if (hasTag) {
-        res = await fetch(`/api/contacts/${contactData.id}/tags/${tag.id}`, {
+        res = await fetch(`/api/contacts/${contactId}/tags/${tag.id}`, {
           method: 'DELETE',
         });
       } else {
-        res = await fetch(`/api/contacts/${contactData.id}/tags`, {
+        res = await fetch(`/api/contacts/${contactId}/tags`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tagId: tag.id }),
@@ -167,7 +192,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isUpdating || !contactData} className="h-7 text-xs px-2">
+                <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2">
                   {assignedUser ? 'Transfer' : 'Assign'}
                 </Button>
               </DropdownMenuTrigger>
@@ -200,7 +225,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating || !contactData}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
