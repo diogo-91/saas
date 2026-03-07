@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, User, Phone, Clock, Tag as TagIcon, Plus } from 'lucide-react';
-import { ChatDetails, ContactData, Tag, UserData } from './types';
+import { ChevronLeft, ChevronRight, Phone, Clock, Tag as TagIcon, Plus, KanbanSquare } from 'lucide-react';
+import { ChatDetails, ContactData, FunnelStage, Tag, UserData } from './types';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
   const { data: teamMembers } = useSWR<UserData[]>('/api/team/members', fetcher);
   const { data: allTags } = useSWR<Tag[]>('/api/tags', fetcher);
+  const { data: funnelStages } = useSWR<FunnelStage[]>('/api/funnel-stages', fetcher);
 
   const phone = chatDetails.remoteJid?.split('@')[0] || '';
   const initials = chatDetails.name
@@ -44,9 +45,19 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
   const assignedUser = contactData?.assignedUser;
   const currentTags = contactData?.tags || [];
+  const currentStage = contactData?.funnelStage;
 
   const getOrCreateContactId = async () => {
     if (contactData?.id) return contactData.id;
+
+    // Auto-assign first funnel stage on creation
+    let firstStageId: number | null = null;
+    try {
+      const stages = await fetch('/api/funnel-stages').then((r) => r.json());
+      firstStageId = stages?.[0]?.id ?? null;
+    } catch {
+      // ignore
+    }
 
     const res = await fetch('/api/contacts', {
       method: 'POST',
@@ -54,6 +65,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
       body: JSON.stringify({
         jid: chatDetails.remoteJid,
         name: chatDetails.name,
+        funnelStageId: firstStageId,
       }),
     });
 
@@ -78,7 +90,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
         body: JSON.stringify({ agentId }),
       });
       if (!res.ok) throw new Error('Falha ao atribuir atendente.');
-      toast.success(agentId ? 'Atendente atribuído com sucesso!' : 'Atendente removido com sucesso!');
+      toast.success(agentId ? 'Atendente atribuído!' : 'Atendente removido!');
       if (onContactUpdate) onContactUpdate();
       mutate(chatDetails.remoteJid ? `/api/contacts/by-chat?jid=${chatDetails.remoteJid}` : null);
     } catch (e: any) {
@@ -90,7 +102,6 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
   const handleToggleTag = async (tag: Tag) => {
     setIsUpdating(true);
-
     const hasTag = currentTags.some((t) => t.id === tag.id);
 
     try {
@@ -99,9 +110,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
       let res;
       if (hasTag) {
-        res = await fetch(`/api/contacts/${contactId}/tags/${tag.id}`, {
-          method: 'DELETE',
-        });
+        res = await fetch(`/api/contacts/${contactId}/tags/${tag.id}`, { method: 'DELETE' });
       } else {
         res = await fetch(`/api/contacts/${contactId}/tags`, {
           method: 'POST',
@@ -111,7 +120,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
       }
 
       if (!res.ok) throw new Error(`Falha ao ${hasTag ? 'remover' : 'adicionar'} a tag`);
-      toast.success(`Tag ${hasTag ? 'removida' : 'adicionada'} com sucesso!`);
+      toast.success(`Tag ${hasTag ? 'removida' : 'adicionada'}!`);
       if (onContactUpdate) onContactUpdate();
       mutate(chatDetails.remoteJid ? `/api/contacts/by-chat?jid=${chatDetails.remoteJid}` : null);
     } catch (e: any) {
@@ -121,16 +130,32 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
     }
   };
 
+  const handleChangeStage = async (stage: FunnelStage | null) => {
+    setIsUpdating(true);
+    try {
+      const contactId = await getOrCreateContactId();
+      if (!contactId) throw new Error('Could not obtain contact record');
+
+      const res = await fetch(`/api/contacts/${contactId}/funnel-stage`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stageId: stage?.id ?? null }),
+      });
+      if (!res.ok) throw new Error('Falha ao atualizar etapa do funil.');
+      toast.success(stage ? `Movido para "${stage.name}"!` : 'Removido do funil!');
+      if (onContactUpdate) onContactUpdate();
+      mutate(chatDetails.remoteJid ? `/api/contacts/by-chat?jid=${chatDetails.remoteJid}` : null);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (collapsed) {
     return (
-      <div className="w-10 border-l bg-card flex flex-col items-center pt-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setCollapsed(false)}
-        >
+      <div className="w-10 border-l border-border/40 bg-card flex flex-col items-center pt-3">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCollapsed(false)}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
       </div>
@@ -138,21 +163,18 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
   }
 
   return (
-    <aside className="w-72 border-l bg-card flex flex-col overflow-y-auto shrink-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+    <aside className="w-72 border-l border-border/40 bg-muted/20 flex flex-col overflow-y-auto shrink-0">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-card">
         <h3 className="text-sm font-semibold">Informações de Contato</h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setCollapsed(true)}
-        >
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCollapsed(true)}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="flex flex-col items-center p-6 border-b min-h-[180px]">
-        <Avatar className="h-20 w-20 mb-3">
+      {/* Avatar + name */}
+      <div className="flex flex-col items-center py-6 px-4 bg-card border-b border-border/40 shadow-sm">
+        <Avatar className="h-20 w-20 mb-3 ring-2 ring-primary/10 ring-offset-2">
           <AvatarImage src={chatDetails.profilePicUrl || undefined} />
           <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
             {initials}
@@ -162,9 +184,11 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
         <p className="text-[13px] text-muted-foreground font-medium"># {phone}</p>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Contact Details Section */}
-        <div className="space-y-3">
+      {/* Cards */}
+      <div className="p-3 space-y-3">
+
+        {/* Telefone + Última Interação */}
+        <div className="rounded-2xl border border-border/50 bg-card shadow-[0_1px_4px_0_rgb(0,0,0,0.04)] p-4 space-y-3">
           <div className="flex items-start gap-3">
             <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <div>
@@ -181,20 +205,23 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
           </div>
         </div>
 
-        {/* Assignment Section */}
-        <div className="space-y-2 border-t pt-4">
+        {/* Atribuição */}
+        <div className="rounded-2xl border border-border/50 bg-card shadow-[0_1px_4px_0_rgb(0,0,0,0.04)] p-4 space-y-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Atribuição</p>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarFallback className="text-[10px]">{assignedUser ? assignedUser.name?.[0] || assignedUser.email[0] : 'U'}</AvatarFallback>
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarFallback className="text-[10px]">
+                  {assignedUser ? (assignedUser.name?.[0] || assignedUser.email[0]).toUpperCase() : 'U'}
+                </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">{assignedUser ? assignedUser.name || assignedUser.email : 'Não Atribuído'}</span>
+              <span className="text-sm font-medium truncate">
+                {assignedUser ? assignedUser.name || assignedUser.email : 'Não Atribuído'}
+              </span>
             </div>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2">
+                <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2 shrink-0">
                   {assignedUser ? 'Transferir' : 'Atribuir'}
                 </Button>
               </DropdownMenuTrigger>
@@ -218,13 +245,55 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
           </div>
         </div>
 
-        {/* Tags Section */}
-        <div className="space-y-3 border-t pt-4">
+        {/* Funil */}
+        <div className="rounded-2xl border border-border/50 bg-card shadow-[0_1px_4px_0_rgb(0,0,0,0.04)] p-4 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <KanbanSquare className="h-3 w-3" /> Funil
+          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {currentStage ? (
+                <>
+                  {currentStage.emoji && <span className="text-base leading-none">{currentStage.emoji}</span>}
+                  <span className="text-sm font-medium">{currentStage.name}</span>
+                </>
+              ) : (
+                <span className="text-sm text-muted-foreground italic">Sem etapa</span>
+              )}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2 shrink-0">
+                  {currentStage ? 'Mover' : 'Definir'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Etapa do Funil</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleChangeStage(null)}>
+                  Sem etapa
+                </DropdownMenuItem>
+                {funnelStages?.map((stage) => (
+                  <DropdownMenuItem
+                    key={stage.id}
+                    onClick={() => handleChangeStage(stage)}
+                    className={currentStage?.id === stage.id ? 'bg-accent font-medium' : ''}
+                  >
+                    {stage.emoji && <span className="mr-2">{stage.emoji}</span>}
+                    {stage.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Etiquetas */}
+        <div className="rounded-2xl border border-border/50 bg-card shadow-[0_1px_4px_0_rgb(0,0,0,0.04)] p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               <TagIcon className="h-3 w-3" /> Etiquetas
             </p>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating}>
@@ -239,23 +308,22 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
                     size="sm"
                     className="h-6 px-2 text-xs"
                     onClick={() => {
-                      const name = window.prompt('Digite o nome da nova etiqueta:');
+                      const name = window.prompt('Nome da nova etiqueta:');
                       if (!name) return;
-                      // Lighter pastel colors more suitable for dark mode readability
-                      const color = ['#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4'][Math.floor(Math.random() * 7)];
-
+                      const colors = ['#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4'];
+                      const color = colors[Math.floor(Math.random() * colors.length)];
                       setIsUpdating(true);
                       fetch('/api/tags', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, color })
+                        body: JSON.stringify({ name, color }),
                       })
-                        .then(res => {
+                        .then((res) => {
                           if (!res.ok) throw new Error('Falha ao criar etiqueta.');
-                          toast.success('Etiqueta criada! Você já pode aplicá-la.');
+                          toast.success('Etiqueta criada!');
                           mutate('/api/tags');
                         })
-                        .catch(e => toast.error(e.message))
+                        .catch((e) => toast.error(e.message))
                         .finally(() => setIsUpdating(false));
                     }}
                   >
@@ -263,18 +331,17 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
                   </Button>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {allTags?.length === 0 ? (
-                  <div className="p-4 text-xs text-muted-foreground text-center italic">Nenhuma etiqueta existe. Clique em "+ Nova" acima.</div>
+                {!allTags?.length ? (
+                  <div className="p-4 text-xs text-muted-foreground text-center italic">
+                    Nenhuma etiqueta. Clique em "+ Nova".
+                  </div>
                 ) : (
-                  allTags?.map((tag) => {
+                  allTags.map((tag) => {
                     const isSelected = currentTags.some((t) => t.id === tag.id);
                     return (
                       <DropdownMenuItem
                         key={tag.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleToggleTag(tag);
-                        }}
+                        onClick={(e) => { e.preventDefault(); handleToggleTag(tag); }}
                         className="flex items-center justify-between cursor-pointer"
                       >
                         <div className="flex items-center gap-2">
@@ -292,27 +359,29 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
           <div className="flex flex-wrap gap-1.5">
             {currentTags.length === 0 ? (
-              <span className="text-xs text-muted-foreground italic">Nenhuma etiqueta adicionada</span>
+              <span className="text-xs text-muted-foreground italic">Nenhuma etiqueta</span>
             ) : (
               currentTags.map((tag) => (
                 <Badge
                   key={tag.id}
                   variant="outline"
-                  className="text-xs font-normal border-transparent hover:bg-opacity-80 transition-colors"
-                  style={{ backgroundColor: `${tag.color}15` || '#e2e8f0', color: tag.color || 'inherit' }}
+                  className="text-xs font-normal border-transparent cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: `${tag.color}20`, color: tag.color || 'inherit' }}
+                  onClick={() => handleToggleTag(tag)}
                 >
-                  {tag.name}
+                  {tag.name} ×
                 </Badge>
               ))
             )}
           </div>
         </div>
 
-        {/* Integration Details Section */}
-        <div className="space-y-2 border-t pt-4">
+        {/* Integração */}
+        <div className="rounded-xl border bg-card shadow-sm p-4 space-y-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Integração</p>
           <p className="text-sm font-medium">{chatDetails.integration}</p>
         </div>
+
       </div>
     </aside>
   );

@@ -82,7 +82,7 @@ export function ChatHeader({
 
   return (
     <>
-      <header className="flex items-center justify-between px-4 py-3 border-b bg-background h-[72px] shrink-0">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-background h-[72px] shrink-0">
         {showSearch ? (
           <div className="flex items-center gap-2 flex-1">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />

@@ -119,9 +119,9 @@ export function ChatListItem({
   return (
     <div
       onClick={handleClick}
-      className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-all border-b border-border/40 ${isActive
-          ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-l-[3px] border-l-indigo-600'
-          : 'hover:bg-muted/50 border-l-[3px] border-l-transparent'
+      className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-all border-b border-border/20 ${isActive
+          ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-l-[3px] border-l-indigo-500/80'
+          : 'hover:bg-muted/40 border-l-[3px] border-l-transparent'
         } ${isSelected ? 'bg-primary/5' : ''}`}
     >
       {isSelectionMode && (
@@ -189,7 +189,7 @@ export function ChatListSkeleton() {
   return (
     <div className="space-y-0">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
+        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border/20">
           <Skeleton className="h-11 w-11 rounded-full shrink-0" />
           <div className="flex-1 space-y-2">
             <div className="flex justify-between">

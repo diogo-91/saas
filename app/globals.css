@@ -99,7 +99,7 @@
 */
 
 :root {
-  --radius: 0.65rem;
+  --radius: 0.875rem;
   --background: oklch(0.96 0.01 286);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -115,7 +115,7 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.88 0.01 286);
+  --border: oklch(0.91 0.007 286);
   --input: oklch(0.88 0.01 286);
   --ring: oklch(0.841 0.238 128.85);
   --chart-1: oklch(0.871 0.15 154.449);
