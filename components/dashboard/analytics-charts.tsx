@@ -11,12 +11,12 @@ export function FunnelLineChart({ data }: { data: any[] }) {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
-          Funnel Progression
+          Progressão do Funil
         </CardTitle>
       </CardHeader>
       <CardContent>
         {total === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No funnel data available.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado de funil disponível.</p>
         ) : (
           <div className="space-y-2">
             {data.map((item: any, i: number) => (
@@ -45,12 +45,12 @@ export function FunnelRadarChart({ data }: { data: any[] }) {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-primary" />
-          Stage Distribution
+          Distribuição por Etapa
         </CardTitle>
       </CardHeader>
       <CardContent>
         {!data || data.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No data available.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado disponível.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {data.map((item: any, i: number) => (
@@ -73,12 +73,12 @@ export function AgentList({ data }: { data: any[] }) {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
-          Agent Performance
+          Desempenho dos Atendentes
         </CardTitle>
       </CardHeader>
       <CardContent>
         {!data || data.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No agent data available.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado de atendente disponível.</p>
         ) : (
           <div className="space-y-3">
             {data.map((agent: any, i: number) => (
@@ -89,7 +89,7 @@ export function AgentList({ data }: { data: any[] }) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-primary">{agent.chatsHandled || agent.count || 0}</p>
-                  <p className="text-xs text-muted-foreground">chats</p>
+                  <p className="text-xs text-muted-foreground">conversas</p>
                 </div>
               </div>
             ))}
@@ -102,7 +102,7 @@ export function AgentList({ data }: { data: any[] }) {
 
 // ─── TrafficHeatmap ───────────────────────────────────────────────────────
 const HOURS = Array.from({ length: 24 }, (_, i) => `${i}h`);
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export function TrafficHeatmap({ data }: { data: any[] }) {
   const maxVal = data?.reduce((max: number, item: any) => Math.max(max, item.count || 0), 1) || 1;
@@ -119,12 +119,12 @@ export function TrafficHeatmap({ data }: { data: any[] }) {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Activity className="h-4 w-4 text-primary" />
-          Message Traffic Heatmap
+          Mapa de Tráfego de Mensagens
         </CardTitle>
       </CardHeader>
       <CardContent>
         {!data || data.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No traffic data available.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado de tráfego disponível.</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="inline-grid gap-1" style={{ gridTemplateColumns: `40px repeat(24, 18px)` }}>

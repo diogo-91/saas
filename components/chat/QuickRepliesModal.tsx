@@ -31,13 +31,13 @@ export function QuickRepliesModal({ open, onOpenChange }: QuickRepliesModalProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Quick Replies</DialogTitle>
+          <DialogTitle>Respostas Rápidas</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search quick replies..."
+            placeholder="Pesquisar respostas rápidas..."
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -47,7 +47,7 @@ export function QuickRepliesModal({ open, onOpenChange }: QuickRepliesModalProps
         <div className="max-h-80 overflow-y-auto space-y-1">
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              {search ? 'No quick replies found.' : 'No quick replies yet. Add them in Settings.'}
+              {search ? 'Nenhuma resposta rápida encontrada.' : 'Nenhuma resposta rápida. Adicione em Configurações.'}
             </p>
           ) : (
             filtered.map((reply: any) => (

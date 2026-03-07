@@ -89,7 +89,7 @@ export default function AiSettingsPage() {
             }
         } else {
             setModel(MODELS['gemini'][0].id);
-            setSystemPrompt("You are a helpful assistant representing the company. Be polite, professional, and concise.");
+            setSystemPrompt("Você é um assistente prestativo representando a empresa. Seja educado, profissional e conciso.");
         }
     } catch (e) {
         console.error(e);
@@ -298,7 +298,7 @@ export default function AiSettingsPage() {
                                 value={systemPrompt} 
                                 onChange={(e) => setSystemPrompt(e.target.value)} 
                                 className="min-h-[200px] font-mono text-sm"
-                                placeholder="You are a helpful assistant..."
+                                placeholder="Você é um assistente prestativo..."
                             />
                             
                             <div className="space-y-3">
@@ -315,8 +315,8 @@ export default function AiSettingsPage() {
                                             onClick={() => fileInputRef.current?.click()}
                                         >
                                             <UploadCloud className="h-10 w-10 mb-3 opacity-50" />
-                                            <p className="text-sm font-medium">Drop files here or click to upload</p>
-                                            <p className="text-xs opacity-70 mt-1">PDF, TXT, Images supported</p>
+                                            <p className="text-sm font-medium">Arraste arquivos ou clique para enviar</p>
+                                            <p className="text-xs opacity-70 mt-1">PDF, TXT e imagens suportados</p>
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

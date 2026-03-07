@@ -143,8 +143,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (notificationPermission === 'default' || notificationPermission === 'denied') {
       setSystemAlert({
         type: 'permission',
-        message: 'Enable desktop notifications to receive message alerts.',
-        actionLabel: 'Enable',
+        message: 'Ative as notificações para receber alertas de novas mensagens.',
+        actionLabel: 'Ativar',
         onAction: requestNotificationPermission
       });
     } else {
@@ -154,7 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
-        toast.error("Browser does not support notifications");
+        toast.error("Seu navegador não suporta notificações");
         return;
     }
     
@@ -163,9 +163,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     
     if (permission === 'granted') {
       setSystemAlert(null);
-      new Notification("Notifications Enabled", { body: "You will now receive alerts for new messages." });
+      new Notification("Notificações Ativadas", { body: "Você receberá alertas para novas mensagens." });
     } else if (permission === 'denied') {
-      toast.error("Permission denied. Please enable in browser settings.");
+      toast.error("Permissão negada. Ative nas configurações do navegador.");
     }
   };
 
@@ -351,9 +351,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         body: JSON.stringify({ chatIds: Array.from(selectedChats) }),
       });
 
-      if (!response.ok) throw new Error('Failed to delete chats');
+      if (!response.ok) throw new Error('Falha ao excluir conversas');
 
-      toast.success('Chats deleted successfully');
+      toast.success('Conversas excluídas com sucesso');
       
       const currentChat = chats?.find(c => c.remoteJid.includes(activeChatNumber || ''));
       if (currentChat && selectedChats.has(currentChat.id)) {
@@ -364,7 +364,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setIsSelectionMode(false);
       setIsDeleteDialogOpen(false);
     } catch (error) {
-      toast.error('Error deleting chats');
+      toast.error('Erro ao excluir conversas');
       mutate('/api/chats', previousChats, { revalidate: true });
     } finally {
       setIsDeleting(false);
@@ -384,12 +384,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const renderChatList = () => {
     if (isLoading) return <ChatListSkeleton />;
-    if (error) return <div className="p-4 text-center text-destructive text-sm">Error loading chats.</div>;
+    if (error) return <div className="p-4 text-center text-destructive text-sm">Erro ao carregar conversas.</div>;
     if (!validChats || validChats.length === 0) {
       if (searchQuery || activeTab === 'unread' || detailedFilters.funnelStageId || detailedFilters.instanceId) {
-        return <div className="p-8 text-center text-muted-foreground text-sm">No chats found.</div>;
+        return <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma conversa encontrada.</div>;
       }
-      return <div className="p-8 text-center text-muted-foreground text-sm">No chats started.</div>;
+      return <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma conversa iniciada.</div>;
     }
 
     return (
@@ -440,7 +440,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={toggleSelectionMode}>
                         <X className="h-5 w-5" />
                     </Button>
-                    <span className="text-sm font-medium text-primary">{selectedChats.size} selected</span>
+                    <span className="text-sm font-medium text-primary">{selectedChats.size} selecionado(s)</span>
                 </div>
             ) : (
                 <DropdownMenu>
@@ -457,14 +457,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-64" align="start">
-                    <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                    <DropdownMenuLabel>Notificações</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     
                     {notificationPermission !== 'granted' && (
                         <>
                             <DropdownMenuItem onClick={requestNotificationPermission} className="text-destructive focus:text-destructive cursor-pointer">
                                 <BellRing className="mr-2 h-4 w-4" />
-                                Allow Notifications
+                                Permitir Notificações
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                         </>
@@ -474,11 +474,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         checked={soundEnabled} 
                         onCheckedChange={handleSoundToggle}
                     >
-                        Enable Sound
+                        Som habilitado
                     </DropdownMenuCheckboxItem>
                     
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Alert Tone</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Tom de alerta</DropdownMenuLabel>
                     <DropdownMenuRadioGroup value={selectedSound} onValueChange={handleSoundChange}>
                         {SOUNDS.map(sound => (
                             <DropdownMenuRadioItem key={sound.id} value={sound.id} className="cursor-pointer">
@@ -519,7 +519,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="w-full justify-start text-sm h-8 px-2"
                       onClick={toggleSelectionMode}
                     >
-                      Select Chats
+                      Selecionar conversas
                     </Button>
                   </PopoverContent>
                 </Popover>
@@ -557,7 +557,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search..."
+              placeholder="Pesquisar..."
               className="pl-10 bg-background border-border rounded-lg h-11 focus-visible:ring-ring"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -597,15 +597,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Chats?</DialogTitle>
+            <DialogTitle>Excluir conversas?</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. This will permanently delete {selectedChats.size} chat(s) and their history.
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente {selectedChats.size} conversa(s) e seu histórico.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDeleteChats} disabled={isDeleting}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
             </Button>
           </DialogFooter>
         </DialogContent>

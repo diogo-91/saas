@@ -60,13 +60,13 @@ export function ChatFilters({
           className={`flex-1 py-2 text-xs font-medium rounded transition-colors ${activeTab === 'all' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={() => setActiveTab('all')}
         >
-          All
+          Todos
         </button>
         <button
           className={`flex-1 py-2 text-xs font-medium rounded transition-colors ${activeTab === 'unread' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           onClick={() => setActiveTab('unread')}
         >
-          Unread
+          Não lidas
         </button>
 
         <DropdownMenu>
@@ -81,14 +81,14 @@ export function ChatFilters({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="text-xs">Filters</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs">Filtros</DropdownMenuLabel>
 
             {instances.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Instance</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Instância</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setFilters({ ...filters, instanceId: null })}>
-                  <span className={!filters.instanceId ? 'text-primary font-medium' : ''}>All instances</span>
+                  <span className={!filters.instanceId ? 'text-primary font-medium' : ''}>Todas instâncias</span>
                 </DropdownMenuItem>
                 {instances.map((inst) => (
                   <DropdownMenuItem
@@ -106,9 +106,9 @@ export function ChatFilters({
             {funnelStages?.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Funnel Stage</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Etapa do Funil</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setFilters({ ...filters, funnelStageId: null })}>
-                  <span className={!filters.funnelStageId ? 'text-primary font-medium' : ''}>All stages</span>
+                  <span className={!filters.funnelStageId ? 'text-primary font-medium' : ''}>Todas etapas</span>
                 </DropdownMenuItem>
                 {funnelStages.map((stage: any) => (
                   <DropdownMenuItem
@@ -127,7 +127,7 @@ export function ChatFilters({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={clearFilters} className="text-destructive focus:text-destructive">
-                  Clear all filters
+                  Limpar filtros
                 </DropdownMenuItem>
               </>
             )}

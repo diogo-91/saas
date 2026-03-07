@@ -54,23 +54,23 @@ function formatLastMessageTime(timestamp: Date | string | null): string {
   if (diffDays === 0) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   }
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 1) return 'Ontem';
   if (diffDays < 7) {
-    return date.toLocaleDateString([], { weekday: 'short' });
+    return date.toLocaleDateString('pt-BR', { weekday: 'short' });
   }
-  return date.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
 function getMessagePreview(chat: Chat): { icon: React.ReactNode; text: string } {
   const text = chat.lastMessageText || '';
   if (text.includes('[image]') || text.startsWith('data:image') || text.startsWith('📷')) {
-    return { icon: <ImageIcon className="h-3 w-3 shrink-0" />, text: 'Photo' };
+    return { icon: <ImageIcon className="h-3 w-3 shrink-0" />, text: 'Foto' };
   }
   if (text.includes('[audio]') || text.includes('[voice]') || text.startsWith('🎤')) {
-    return { icon: <Mic className="h-3 w-3 shrink-0" />, text: 'Audio' };
+    return { icon: <Mic className="h-3 w-3 shrink-0" />, text: 'Áudio' };
   }
   if (text.includes('[document]') || text.includes('[file]') || text.startsWith('📄')) {
-    return { icon: <FileText className="h-3 w-3 shrink-0" />, text: 'Document' };
+    return { icon: <FileText className="h-3 w-3 shrink-0" />, text: 'Documento' };
   }
   return { icon: null, text: text };
 }

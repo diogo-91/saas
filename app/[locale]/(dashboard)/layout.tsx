@@ -39,10 +39,10 @@ function UserMenu() {
           href="/#pricing"
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          Pricing
+          Preços
         </Link>
         <Button asChild className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
-          <Link href="/sign-up">Sign Up</Link>
+          <Link href="/sign-up">Cadastrar</Link>
         </Button>
       </>
     );
@@ -65,20 +65,20 @@ function UserMenu() {
         <DropdownMenuItem className="cursor-pointer">
           <Link href="/dashboard" className="flex w-full items-center">
             <MessageCircle className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
+            <span>Painel</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer">
           <Link href="/settings" className="flex w-full items-center">
             <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <span>Configurações</span>
           </Link>
         </DropdownMenuItem>
         <form action={handleSignOut} className="w-full">
           <button type="submit" className="flex w-full">
             <DropdownMenuItem className="w-full flex-1 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
+              <span>Sair</span>
             </DropdownMenuItem>
           </button>
         </form>

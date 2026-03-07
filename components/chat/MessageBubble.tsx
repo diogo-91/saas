@@ -59,8 +59,8 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
     }
     return (
       <div className={`mb-2 p-2 rounded-md border-l-4 border-primary/60 ${isFromMe ? 'bg-primary-foreground/10' : 'bg-muted'}`}>
-        <p className="text-xs font-medium text-primary/80 mb-0.5">Quoted</p>
-        <p className="text-xs opacity-75 truncate">{quotedData.text || 'Media'}</p>
+        <p className="text-xs font-medium text-primary/80 mb-0.5">Citado</p>
+        <p className="text-xs opacity-75 truncate">{quotedData.text || 'Mídia'}</p>
       </div>
     );
   };
@@ -108,7 +108,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
           ) : (
             <div className="flex items-center gap-2">
               <Mic className="h-4 w-4 shrink-0" />
-              <span className="text-xs opacity-70">Audio message</span>
+              <span className="text-xs opacity-70">Mensagem de áudio</span>
             </div>
           )}
         </div>
@@ -125,7 +125,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
         >
           <FileText className="h-5 w-5 shrink-0" />
           <span className="text-sm underline truncate max-w-[200px]">
-            {msg.text || 'Document'}
+            {msg.text || 'Documento'}
           </span>
         </a>
       );
@@ -139,7 +139,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
       );
     }
 
-    return <p className="text-sm italic opacity-60">[Unsupported message]</p>;
+    return <p className="text-sm italic opacity-60">[Mensagem não suportada]</p>;
   };
 
   return (
@@ -164,13 +164,13 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
 
         <div className={`px-3 py-2 rounded-2xl shadow-sm ${bubbleClass}`} style={{ maxWidth: '100%' }}>
           {msg.isAi && (
-            <p className="text-[10px] font-medium opacity-60 mb-1 uppercase tracking-wide">AI Agent</p>
+            <p className="text-[10px] font-medium opacity-60 mb-1 uppercase tracking-wide">Agente IA</p>
           )}
           {msg.isAutomation && (
-            <p className="text-[10px] font-medium opacity-60 mb-1 uppercase tracking-wide">Automation</p>
+            <p className="text-[10px] font-medium opacity-60 mb-1 uppercase tracking-wide">Automação</p>
           )}
           {msg.isInternal && (
-            <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mb-1 uppercase tracking-wide">Internal Note</p>
+            <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mb-1 uppercase tracking-wide">Nota Interna</p>
           )}
           {renderQuotedMessage()}
           {renderContent()}

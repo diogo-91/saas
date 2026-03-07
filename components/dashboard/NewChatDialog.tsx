@@ -38,7 +38,7 @@ export function NewChatDialog({ isOpen, onClose, instances }: NewChatDialogProps
     e.preventDefault();
     const cleaned = phone.replace(/\D/g, '');
     if (!cleaned) {
-      toast.error('Please enter a valid phone number');
+      toast.error('Por favor, insira um número de telefone válido');
       return;
     }
 
@@ -50,7 +50,7 @@ export function NewChatDialog({ isOpen, onClose, instances }: NewChatDialogProps
       setPhone('');
       setInstanceId('');
     } catch {
-      toast.error('Failed to open chat');
+      toast.error('Falha ao abrir o chat');
     } finally {
       setIsLoading(false);
     }
@@ -62,31 +62,31 @@ export function NewChatDialog({ isOpen, onClose, instances }: NewChatDialogProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Phone className="h-4 w-4" />
-            New Chat
+            Nova Conversa
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone number</Label>
+            <Label htmlFor="phone">Número de telefone</Label>
             <Input
               id="phone"
-              placeholder="e.g. 5511999999999"
+              placeholder="Ex: 5511999999999"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              Include country code (e.g. 55 for Brazil)
+              Inclua o código do país (Ex: 55 para o Brasil)
             </p>
           </div>
 
           {instances.length > 1 && (
             <div className="space-y-2">
-              <Label>Instance</Label>
+              <Label>Instância</Label>
               <Select value={instanceId} onValueChange={setInstanceId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select instance" />
+                  <SelectValue placeholder="Selecionar instância" />
                 </SelectTrigger>
                 <SelectContent>
                   {instances.map((inst) => (
@@ -101,10 +101,10 @@ export function NewChatDialog({ isOpen, onClose, instances }: NewChatDialogProps
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isLoading || !phone.trim()}>
-              Open Chat
+              Abrir Conversa
             </Button>
           </DialogFooter>
         </form>

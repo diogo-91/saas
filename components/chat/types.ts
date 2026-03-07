@@ -54,12 +54,20 @@ export interface Tag {
   createdAt: string;
 }
 
+export interface FunnelStage {
+  id: number;
+  name: string;
+  emoji: string | null;
+  order: number;
+}
+
 export interface ContactData {
   id?: number;
   name: string;
   notes?: string | null;
   tags?: Tag[];
   assignedUser?: Pick<UserData, 'id' | 'name' | 'email'> | null;
+  funnelStage?: FunnelStage | null;
 }
 
 export interface TeamData {
