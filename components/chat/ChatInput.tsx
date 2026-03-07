@@ -152,7 +152,7 @@ export function ChatInput({
       />
 
       <div className="flex items-end gap-2 px-3 py-2">
-        <div className={`flex-1 flex flex-col rounded-2xl border ${isInternalNote ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : 'border-border bg-background'} px-3 py-2`}>
+        <div className={`flex-1 flex flex-col rounded-2xl border ${isInternalNote ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : 'border-border bg-white dark:bg-background'} px-3 py-2`}>
           {isInternalNote && (
             <div className="flex items-center gap-1 mb-1">
               <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Nota Interna</span>

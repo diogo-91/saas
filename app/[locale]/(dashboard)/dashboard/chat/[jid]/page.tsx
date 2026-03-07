@@ -545,7 +545,7 @@ export default function ChatPage() {
           onMarkUnread={currentChat ? handleMarkUnread : undefined}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 space-y-1 bg-muted">
+        <main className="flex-1 overflow-y-auto p-4 space-y-1 bg-white dark:bg-background">
           {renderMessages()}
           <div ref={messagesEndRef} />
         </main>
