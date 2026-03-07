@@ -46,6 +46,7 @@ export function ChatFilters({
 }: ChatFiltersProps) {
   const { data: funnelStages } = useSWR('/api/funnel-stages', fetcher);
   const { data: tags } = useSWR('/api/tags', fetcher);
+  const { data: teamMembers } = useSWR('/api/team/members', fetcher);
 
   const activeCount = Object.values(filters).filter(Boolean).length;
 
@@ -83,20 +84,20 @@ export function ChatFilters({
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel className="text-xs">Filtros</DropdownMenuLabel>
 
-            {instances.length > 0 && (
+            {teamMembers?.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Instância</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setFilters({ ...filters, instanceId: null })}>
-                  <span className={!filters.instanceId ? 'text-primary font-medium' : ''}>Todas instâncias</span>
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Responsável</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setFilters({ ...filters, agentId: null })}>
+                  <span className={!filters.agentId ? 'text-primary font-medium' : ''}>Todos</span>
                 </DropdownMenuItem>
-                {instances.map((inst) => (
+                {teamMembers.map((member: any) => (
                   <DropdownMenuItem
-                    key={inst.dbId}
-                    onClick={() => setFilters({ ...filters, instanceId: inst.dbId })}
+                    key={member.id}
+                    onClick={() => setFilters({ ...filters, agentId: member.id })}
                   >
-                    <span className={filters.instanceId === inst.dbId ? 'text-primary font-medium' : ''}>
-                      {inst.instanceName}
+                    <span className={filters.agentId === member.id ? 'text-primary font-medium' : ''}>
+                      {member.name || member.email}
                     </span>
                   </DropdownMenuItem>
                 ))}
