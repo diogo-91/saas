@@ -229,11 +229,40 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
                   <Plus className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
-                <DropdownMenuLabel>Select Tags</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Select Tags</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      const name = window.prompt('Enter new tag name:');
+                      if (!name) return;
+                      const color = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'][Math.floor(Math.random() * 7)];
+
+                      setIsUpdating(true);
+                      fetch('/api/tags', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, color })
+                      })
+                        .then(res => {
+                          if (!res.ok) throw new Error('Failed to create tag');
+                          toast.success('Tag created! You can now assign it.');
+                          // Slight hack to refresh tags since SWR's mutate would require importing it or passing it down
+                          window.location.reload();
+                        })
+                        .catch(e => toast.error(e.message))
+                        .finally(() => setIsUpdating(false));
+                    }}
+                  >
+                    + Create Tag
+                  </Button>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {allTags?.length === 0 ? (
-                  <div className="p-2 text-xs text-muted-foreground text-center">No tags available</div>
+                  <div className="p-4 text-xs text-muted-foreground text-center italic">No tags exist yet. Click "Create Tag" above.</div>
                 ) : (
                   allTags?.map((tag) => {
                     const isSelected = currentTags.some((t) => t.id === tag.id);
