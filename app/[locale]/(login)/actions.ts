@@ -484,6 +484,72 @@ export const inviteTeamMember = validatedActionWithUser(
   }
 );
 
+const addTeamMemberDirectSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  role: z.enum(['member', 'owner'])
+});
+
+export const addTeamMemberDirect = validatedActionWithUser(
+  addTeamMemberDirectSchema,
+  async (data, _, user) => {
+    const { email, password, role } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    if (!userWithTeam?.teamId) {
+      return { error: 'User is not part of a team' };
+    }
+
+    try {
+      await enforceLimit(userWithTeam.teamId, 'users');
+    } catch (e: any) {
+      return { error: e.message };
+    }
+
+    // Check if already a member of this team
+    const existingMember = await db
+      .select()
+      .from(users)
+      .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
+      .where(and(eq(users.email, email), eq(teamMembers.teamId, userWithTeam.teamId)))
+      .limit(1);
+
+    if (existingMember.length > 0) {
+      return { error: 'User is already a member of this team' };
+    }
+
+    // Check if user already exists in the platform
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    let newUserId: number;
+
+    if (existingUser.length > 0) {
+      newUserId = existingUser[0].id;
+    } else {
+      const passwordHash = await hashPassword(password);
+      const [createdUser] = await db
+        .insert(users)
+        .values({ email, passwordHash, role: 'member' } as NewUser)
+        .returning({ id: users.id });
+      newUserId = createdUser.id;
+    }
+
+    await db.insert(teamMembers).values({
+      userId: newUserId,
+      teamId: userWithTeam.teamId,
+      role,
+    } as NewTeamMember);
+
+    await logActivity(userWithTeam.teamId, user.id, ActivityType.INVITE_TEAM_MEMBER);
+
+    return { success: 'Team member added successfully' };
+  }
+);
+
 const revokeInvitationSchema = z.object({
   inviteId: z.coerce.number()
 });

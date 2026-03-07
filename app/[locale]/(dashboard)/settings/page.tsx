@@ -12,7 +12,7 @@ import {
 import { customerPortalAction } from '@/lib/payments/actions';
 import { useActionState, useState } from 'react';
 import { TeamDataWithMembers, User, Invitation } from '@/lib/db/schema';
-import { removeTeamMember, inviteTeamMember, revokeInvitation, resendInvitation } from '@/app/[locale]/(login)/actions';
+import { removeTeamMember, addTeamMemberDirect, revokeInvitation, resendInvitation } from '@/app/[locale]/(login)/actions';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 import { Input } from '@/components/ui/input';
@@ -449,33 +449,35 @@ function PendingInvitations() {
     );
 }
 
-function InviteTeamMemberSkeleton() {
-  const t = useTranslations('Settings');
+function AddTeamMemberSkeleton() {
   return (
-    <Card className="h-[260px]">
+    <Card className="h-[300px]">
       <CardHeader>
-        <CardTitle>{t('invite_section_title')}</CardTitle>
+        <CardTitle>Adicionar Membro</CardTitle>
       </CardHeader>
     </Card>
   );
 }
 
-function InviteTeamMember() {
-  const t = useTranslations('Settings');
+function AddTeamMember() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
-  const { mutate } = useSWR('/api/invitations');
+  const { mutate } = useSWR('/api/team');
   const isOwner = user?.role === 'owner';
-  
-  const [inviteState, inviteAction, isInvitePending] = useActionState<ActionState, FormData>(
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [, addAction, isAdding] = useActionState<ActionState, FormData>(
     async (prevState, formData) => {
-        const result: ActionState = await inviteTeamMember(prevState, formData);
-        if (result.success) {
-            toast.success(t('invitation_sent_toast')); 
-            mutate();
-        } else if (result.error) {
-            toast.error(result.error);
-        }
-        return result;
+      const result: ActionState = await addTeamMemberDirect(prevState, formData);
+      if (result.success) {
+        toast.success('Membro adicionado com sucesso!');
+        mutate();
+        // reset form
+        const form = document.getElementById('add-member-form') as HTMLFormElement;
+        form?.reset();
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+      return result;
     },
     {}
   );
@@ -483,14 +485,12 @@ function InviteTeamMember() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('invite_section_title')}</CardTitle>
+        <CardTitle>Adicionar Membro</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form id="add-member-form" action={addAction} className="space-y-4">
           <div>
-            <Label htmlFor="email" className="mb-2">
-              {t('email_label')}
-            </Label>
+            <Label htmlFor="email" className="mb-2">Email</Label>
             <Input
               id="email"
               name="email"
@@ -501,47 +501,56 @@ function InviteTeamMember() {
             />
           </div>
           <div>
-            <Label>{t('role_label')}</Label>
-            <RadioGroup
-              defaultValue="member"
-              name="role"
-              className="flex space-x-4"
-              disabled={!isOwner}
-            >
+            <Label htmlFor="password" className="mb-2">Senha</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Mínimo 8 caracteres"
+                minLength={8}
+                required
+                disabled={!isOwner}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+              >
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <Label className="mb-2">Função</Label>
+            <RadioGroup defaultValue="member" name="role" className="flex space-x-4" disabled={!isOwner}>
               <div className="flex items-center space-x-2 mt-2">
                 <RadioGroupItem value="member" id="member" />
-                <Label htmlFor="member">{t('role_member')}</Label>
+                <Label htmlFor="member">Membro</Label>
               </div>
               <div className="flex items-center space-x-2 mt-2">
                 <RadioGroupItem value="owner" id="owner" />
-                <Label htmlFor="owner">{t('role_owner')}</Label>
+                <Label htmlFor="owner">Administrador</Label>
               </div>
             </RadioGroup>
           </div>
           <Button
             type="submit"
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            disabled={isInvitePending || !isOwner}
+            disabled={isAdding || !isOwner}
           >
-            {isInvitePending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('inviting')}
-              </>
+            {isAdding ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adicionando...</>
             ) : (
-              <>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t('invite_btn')}
-              </>
+              <><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Membro</>
             )}
           </Button>
         </form>
       </CardContent>
       {!isOwner && (
         <CardFooter>
-          <p className="text-sm text-muted-foreground">
-            {t('owner_only')}
-          </p>
+          <p className="text-sm text-muted-foreground">Apenas o administrador pode adicionar membros.</p>
         </CardFooter>
       )}
     </Card>
@@ -564,8 +573,8 @@ export default function SettingsPage() {
       <Suspense fallback={<TeamMembersSkeleton />}>
         <TeamMembers />
       </Suspense>
-      <Suspense fallback={<InviteTeamMemberSkeleton />}>
-        <InviteTeamMember />
+      <Suspense fallback={<AddTeamMemberSkeleton />}>
+        <AddTeamMember />
       </Suspense>
     </section>
   );
