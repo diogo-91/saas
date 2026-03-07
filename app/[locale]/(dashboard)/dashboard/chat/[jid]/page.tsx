@@ -477,6 +477,39 @@ export default function ChatPage() {
     toast.success('Marcada como não lida');
   };
 
+  const handleDownloadChat = () => {
+    if (!messages || messages.length === 0) {
+      toast.error('Nenhuma mensagem para exportar');
+      return;
+    }
+
+    let textContent = `Conversa com ${chatDetails.name} (${chatDetails.remoteJid})\n`;
+    textContent += `Exportado em: ${new Date().toLocaleString()}\n`;
+    textContent += `--------------------------------------------------\n\n`;
+
+    messages.forEach(msg => {
+      const time = new Date(msg.timestamp).toLocaleString();
+      const sender = msg.fromMe ? (user?.name || user?.email || 'Atendente') : chatDetails.name;
+      const content = msg.text || (msg.mediaUrl ? `[Mídia: ${msg.messageType}]` : '[Mensagem não suportada]');
+      if (msg.isInternal) {
+        textContent += `[${time}] NOTA INTERNA (${sender}): ${content}\n`;
+      } else {
+        textContent += `[${time}] ${sender}: ${content}\n`;
+      }
+    });
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `conversa_${chatDetails.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().getTime()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Conversa exportada com sucesso');
+  };
+
   const renderReplyPreview = () => {
     if (!quotedMessage) return null;
     return (
@@ -543,6 +576,7 @@ export default function ChatPage() {
           onCloseChat={currentChat ? handleCloseChat : undefined}
           onDeleteChat={currentChat ? handleDeleteChat : undefined}
           onMarkUnread={currentChat ? handleMarkUnread : undefined}
+          onDownloadChat={messages && messages.length > 0 ? handleDownloadChat : undefined}
         />
 
         <main className="flex-1 overflow-y-auto p-4 space-y-1 bg-white dark:bg-background">

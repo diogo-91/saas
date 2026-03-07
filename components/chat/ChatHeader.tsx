@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, X, MoreVertical, CheckCheck, Trash2, XCircle } from 'lucide-react';
+import { Search, X, MoreVertical, CheckCheck, Trash2, XCircle, Download } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,7 @@ interface ChatHeaderProps {
   onCloseChat?: () => Promise<void>;
   onDeleteChat?: () => Promise<void>;
   onMarkUnread?: () => void;
+  onDownloadChat?: () => void;
 }
 
 export function ChatHeader({
@@ -46,6 +47,7 @@ export function ChatHeader({
   onCloseChat,
   onDeleteChat,
   onMarkUnread,
+  onDownloadChat,
 }: ChatHeaderProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -126,9 +128,22 @@ export function ChatHeader({
                 size="icon"
                 className="h-9 w-9 text-muted-foreground"
                 onClick={() => setShowSearch(true)}
+                title="Pesquisar"
               >
                 <Search className="h-4 w-4" />
               </Button>
+
+              {onDownloadChat && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-muted-foreground"
+                  onClick={onDownloadChat}
+                  title="Exportar conversa"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
