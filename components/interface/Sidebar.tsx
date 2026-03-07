@@ -40,6 +40,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { data: user } = useSWR('/api/user', fetcher);
+  const { data: teamData } = useSWR('/api/team', fetcher);
 
   const isActive = (href: string) => {
     // Strip locale prefix for matching
@@ -50,7 +51,8 @@ export function Sidebar() {
     return normalized.startsWith(href);
   };
 
-  const isMember = user?.role === 'member';
+  const myTeamMember = teamData?.teamMembers?.find((tm: any) => tm.userId === user?.id);
+  const isMember = myTeamMember?.role === 'member';
   const visibleNavItems = navItems.filter(item => !item.adminOnly || !isMember);
 
   const userInitials = (user?.name || user?.email || 'U')
