@@ -140,7 +140,7 @@ export default function ChatPage() {
 
   const chatDetails: ChatDetails = {
     remoteJid: remoteJid,
-    name: contact?.name || currentChat?.name || currentChat?.pushName || chatNumber || 'Chat',
+    name: contact?.name || currentChat?.name || currentChat?.pushName || chatNumber || 'Conversa',
     profilePicUrl: currentChat?.profilePicUrl || null,
     lastCustomerInteraction: currentChat?.lastCustomerInteraction ? new Date(currentChat.lastCustomerInteraction).toISOString() : null,
     integration: activeInstance?.integration || 'WHATSAPP-BAILEYS'
@@ -240,7 +240,7 @@ export default function ChatPage() {
       setRecordingTime(0);
       recordingTimerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
     } catch (err) {
-      toast.error("Could not start recording.");
+      toast.error("Não foi possível iniciar a gravação.");
     }
   };
 
@@ -317,7 +317,7 @@ export default function ChatPage() {
     } catch (sendError: any) {
       mutateMessages((currentMessages = []) => currentMessages.filter(msg => msg.id !== tempId), false);
       setNewMessage(textToSend); setQuotedMessage(messageToQuote);
-      toast.error(`Error sending message: ${sendError.message}`);
+      toast.error(`Erro ao enviar mensagem: ${sendError.message}`);
     } finally { clearTimeout(timer); setRecordingStatus('idle'); }
   };
 
@@ -353,7 +353,7 @@ export default function ChatPage() {
     } catch (sendError: any) {
       mutateMessages((currentMessages = []) => currentMessages.filter(msg => msg.id !== tempId), false);
       setQuotedMessage(messageToQuote);
-      toast.error(`Error sending audio: ${sendError.message}`);
+      toast.error(`Erro ao enviar áudio: ${sendError.message}`);
     } finally { clearTimeout(timer); cancelRecording(); if (tempAudioUrl) URL.revokeObjectURL(tempAudioUrl); }
   };
 
@@ -422,7 +422,7 @@ export default function ChatPage() {
     } catch (sendError: any) {
       mutateMessages((currentMessages = []) => currentMessages.filter(msg => msg.id !== tempId), false);
       setQuotedMessage(messageToQuote);
-      toast.error(`Error sending file: ${sendError.message}`);
+      toast.error(`Erro ao enviar arquivo: ${sendError.message}`);
     } finally {
       clearTimeout(timer);
       URL.revokeObjectURL(tempMediaUrl);
@@ -442,12 +442,12 @@ export default function ChatPage() {
     if (!currentChat?.id) return;
     try {
       const res = await fetch(`/api/chats/${currentChat.id}/close`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to close chat');
-      toast.success('Conversation closed');
+      if (!res.ok) throw new Error('Falha ao finalizar conversa');
+      toast.success('Conversa finalizada');
       globalMutate('/api/chats');
       mutateMessages();
     } catch (e: any) {
-      toast.error(e.message || 'Error closing conversation');
+      toast.error(e.message || 'Erro ao finalizar conversa');
     }
   };
 
@@ -459,12 +459,12 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatIds: [currentChat.id] }),
       });
-      if (!res.ok) throw new Error('Failed to delete chat');
-      toast.success('Chat deleted');
+      if (!res.ok) throw new Error('Falha ao excluir conversa');
+      toast.success('Conversa excluída');
       globalMutate('/api/chats');
       router.push('/dashboard');
     } catch (e: any) {
-      toast.error(e.message || 'Error deleting chat');
+      toast.error(e.message || 'Erro ao excluir conversa');
     }
   };
 
@@ -474,7 +474,7 @@ export default function ChatPage() {
     globalMutate('/api/chats', (currentData: Chat[] | undefined = []) =>
       currentData.map(chat => chat.id === currentChat.id ? { ...chat, unreadCount: 1 } : chat), false
     );
-    toast.success('Marked as unread');
+    toast.success('Marcada como não lida');
   };
 
   const renderReplyPreview = () => {
@@ -482,8 +482,8 @@ export default function ChatPage() {
     return (
       <div className="relative p-2 px-4 border-t bg-accent">
         <div className="p-2 rounded-md bg-muted border-l-4 border-primary">
-          <p className="text-sm font-medium text-primary">Replying...</p>
-          <p className="text-sm text-muted-foreground truncate">{quotedMessage.text || 'Media'}</p>
+          <p className="text-sm font-medium text-primary">Respondendo...</p>
+          <p className="text-sm text-muted-foreground truncate">{quotedMessage.text || 'Mídia'}</p>
         </div>
         <Button variant="ghost" size="icon" className="absolute top-1 right-2 h-7 w-7 rounded-full" onClick={() => setQuotedMessage(null)}><X className="h-4 w-4 text-muted-foreground" /></Button>
       </div>
@@ -492,10 +492,10 @@ export default function ChatPage() {
 
   const renderMessages = () => {
     if (isLoading) return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-    if (error) return <div className="p-4 text-center text-destructive">Error loading messages.</div>;
+    if (error) return <div className="p-4 text-center text-destructive">Erro ao carregar mensagens.</div>;
     if (!filteredMessages || filteredMessages.length === 0) {
-      if (searchQuery) return <div className="p-4 text-center text-muted-foreground">No message found for "{searchQuery}".</div>;
-      return <div className="p-4 text-center text-muted-foreground">No messages in this chat yet.</div>;
+      if (searchQuery) return <div className="p-4 text-center text-muted-foreground">Nenhuma mensagem encontrada para "{searchQuery}".</div>;
+      return <div className="p-4 text-center text-muted-foreground">Nenhuma mensagem nesta conversa ainda.</div>;
     }
 
     return filteredMessages.map((msg, index) => {

@@ -83,7 +83,7 @@ export function ChatInput({
           <span className="text-sm font-mono text-destructive font-semibold">
             {formatRecordingTime(recordingTime)}
           </span>
-          <span className="text-xs text-muted-foreground">Recording...</span>
+          <span className="text-xs text-muted-foreground">Gravando...</span>
         </div>
         <Button variant="ghost" size="icon" onClick={onCancelRecording} className="text-muted-foreground">
           <X className="h-4 w-4" />
@@ -155,7 +155,7 @@ export function ChatInput({
         <div className={`flex-1 flex flex-col rounded-2xl border ${isInternalNote ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20' : 'border-border bg-background'} px-3 py-2`}>
           {isInternalNote && (
             <div className="flex items-center gap-1 mb-1">
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Internal Note</span>
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Nota Interna</span>
               <button onClick={() => setIsInternalNote(false)} className="ml-auto text-amber-500 hover:text-amber-700">
                 <X className="h-3 w-3" />
               </button>
@@ -165,7 +165,7 @@ export function ChatInput({
             <Textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={isInternalNote ? 'Write an internal note...' : 'Type a message...'}
+              placeholder={isInternalNote ? 'Escreva uma nota interna...' : 'Digite uma mensagem...'}
               className="min-h-[36px] max-h-[120px] border-none shadow-none focus-visible:ring-0 resize-none bg-transparent p-0 text-sm leading-5"
               rows={1}
               onKeyDown={(e) => {
@@ -200,14 +200,14 @@ export function ChatInput({
                   className="w-full justify-start gap-2 text-sm h-8"
                   onClick={() => handleFileIconClick('image/*,video/*')}
                 >
-                  <Image className="h-4 w-4" /> Image/Video
+                  <Image className="h-4 w-4" /> Imagem/Vídeo
                 </Button>
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2 text-sm h-8"
                   onClick={() => handleFileIconClick('*/*')}
                 >
-                  <FileText className="h-4 w-4" /> Document
+                  <FileText className="h-4 w-4" /> Documento
                 </Button>
               </PopoverContent>
             </Popover>
@@ -226,7 +226,7 @@ export function ChatInput({
               size="icon"
               className={`h-7 w-7 ${isInternalNote ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground'}`}
               onClick={() => setIsInternalNote(!isInternalNote)}
-              title="Toggle internal note"
+              title="Alternar nota interna"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

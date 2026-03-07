@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, User, Phone, Clock, Tag as TagIcon, Plus } from 'lucide-react';
@@ -77,9 +77,10 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId }),
       });
-      if (!res.ok) throw new Error('Failed to assign agent');
-      toast.success(agentId ? 'Agent assigned successfully' : 'Agent unassigned');
+      if (!res.ok) throw new Error('Falha ao atribuir atendente.');
+      toast.success(agentId ? 'Atendente atribuído com sucesso!' : 'Atendente removido com sucesso!');
       if (onContactUpdate) onContactUpdate();
+      mutate(chatDetails.remoteJid ? `/api/contacts/by-chat?jid=${chatDetails.remoteJid}` : null);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -109,9 +110,10 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
         });
       }
 
-      if (!res.ok) throw new Error(`Failed to ${hasTag ? 'remove' : 'add'} tag`);
-      toast.success(`Tag ${hasTag ? 'removed' : 'added'} successfully`);
+      if (!res.ok) throw new Error(`Falha ao ${hasTag ? 'remover' : 'adicionar'} a tag`);
+      toast.success(`Tag ${hasTag ? 'removida' : 'adicionada'} com sucesso!`);
       if (onContactUpdate) onContactUpdate();
+      mutate(chatDetails.remoteJid ? `/api/contacts/by-chat?jid=${chatDetails.remoteJid}` : null);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -138,7 +140,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
   return (
     <aside className="w-72 border-l bg-card flex flex-col overflow-y-auto shrink-0">
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="text-sm font-semibold">Contact Info</h3>
+        <h3 className="text-sm font-semibold">Informações de Contato</h3>
         <Button
           variant="ghost"
           size="icon"
@@ -166,14 +168,14 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
           <div className="flex items-start gap-3">
             <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-muted-foreground">Phone</p>
+              <p className="text-xs text-muted-foreground">Telefone</p>
               <p className="text-sm font-medium">{phone}</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Clock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-muted-foreground">Last Interaction</p>
+              <p className="text-xs text-muted-foreground">Última Interação</p>
               <p className="text-sm font-medium">{lastInteraction}</p>
             </div>
           </div>
@@ -181,26 +183,26 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
         {/* Assignment Section */}
         <div className="space-y-2 border-t pt-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assignment</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Atribuição</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
                 <AvatarFallback className="text-[10px]">{assignedUser ? assignedUser.name?.[0] || assignedUser.email[0] : 'U'}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">{assignedUser ? assignedUser.name || assignedUser.email : 'Unassigned'}</span>
+              <span className="text-sm font-medium">{assignedUser ? assignedUser.name || assignedUser.email : 'Não Atribuído'}</span>
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isUpdating} className="h-7 text-xs px-2">
-                  {assignedUser ? 'Transfer' : 'Assign'}
+                  {assignedUser ? 'Transferir' : 'Atribuir'}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Select Agent</DropdownMenuLabel>
+                <DropdownMenuLabel>Selecionar Atendente</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleAssignAgent(null)}>
-                  Unassigned
+                  Não Atribuído
                 </DropdownMenuItem>
                 {teamMembers?.map((member) => (
                   <DropdownMenuItem
@@ -220,7 +222,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
         <div className="space-y-3 border-t pt-4">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <TagIcon className="h-3 w-3" /> Tags
+              <TagIcon className="h-3 w-3" /> Etiquetas
             </p>
 
             <DropdownMenu>
@@ -231,13 +233,13 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
                 <DropdownMenuLabel className="flex items-center justify-between">
-                  <span>Select Tags</span>
+                  <span>Selecionar Etiquetas</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
                     onClick={() => {
-                      const name = window.prompt('Enter new tag name:');
+                      const name = window.prompt('Digite o nome da nova etiqueta:');
                       if (!name) return;
                       // Lighter pastel colors more suitable for dark mode readability
                       const color = ['#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4'][Math.floor(Math.random() * 7)];
@@ -249,21 +251,20 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
                         body: JSON.stringify({ name, color })
                       })
                         .then(res => {
-                          if (!res.ok) throw new Error('Failed to create tag');
-                          toast.success('Tag created! You can now assign it.');
-                          // Slight hack to refresh tags since SWR's mutate would require importing it or passing it down
-                          window.location.reload();
+                          if (!res.ok) throw new Error('Falha ao criar etiqueta.');
+                          toast.success('Etiqueta criada! Você já pode aplicá-la.');
+                          mutate('/api/tags');
                         })
                         .catch(e => toast.error(e.message))
                         .finally(() => setIsUpdating(false));
                     }}
                   >
-                    + Create Tag
+                    + Nova
                   </Button>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {allTags?.length === 0 ? (
-                  <div className="p-4 text-xs text-muted-foreground text-center italic">No tags exist yet. Click "Create Tag" above.</div>
+                  <div className="p-4 text-xs text-muted-foreground text-center italic">Nenhuma etiqueta existe. Clique em "+ Nova" acima.</div>
                 ) : (
                   allTags?.map((tag) => {
                     const isSelected = currentTags.some((t) => t.id === tag.id);
@@ -291,7 +292,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
           <div className="flex flex-wrap gap-1.5">
             {currentTags.length === 0 ? (
-              <span className="text-xs text-muted-foreground italic">No tags added</span>
+              <span className="text-xs text-muted-foreground italic">Nenhuma etiqueta adicionada</span>
             ) : (
               currentTags.map((tag) => (
                 <Badge
@@ -309,7 +310,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
 
         {/* Integration Details Section */}
         <div className="space-y-2 border-t pt-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Integration</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Integração</p>
           <p className="text-sm font-medium">{chatDetails.integration}</p>
         </div>
       </div>

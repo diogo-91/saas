@@ -86,7 +86,7 @@ export function ChatHeader({
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               autoFocus
-              placeholder="Search messages..."
+              placeholder="Pesquisar mensagens..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="border-none shadow-none focus-visible:ring-0 h-8 p-0"
@@ -145,13 +145,13 @@ export function ChatHeader({
                   {onMarkUnread && (
                     <DropdownMenuItem onClick={onMarkUnread}>
                       <CheckCheck className="h-4 w-4 mr-2" />
-                      Mark as unread
+                      Marcar como não lida
                     </DropdownMenuItem>
                   )}
                   {onCloseChat && (
                     <DropdownMenuItem onClick={handleCloseChat}>
                       <XCircle className="h-4 w-4 mr-2" />
-                      Close conversation
+                      Finalizar conversa
                     </DropdownMenuItem>
                   )}
                   {onDeleteChat && (
@@ -162,7 +162,7 @@ export function ChatHeader({
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Delete chat
+                        Excluir conversa
                       </DropdownMenuItem>
                     </>
                   )}
@@ -176,18 +176,18 @@ export function ChatHeader({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all messages with {chatDetails.name}. This action cannot be undone.
+              Isso excluirá permanentemente todas as mensagens com {chatDetails.name}. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteChat}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
