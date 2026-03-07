@@ -158,8 +158,8 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
             {initials}
           </AvatarFallback>
         </Avatar>
-        <p className="font-semibold text-base text-center">{chatDetails.name}</p>
-        <p className="text-sm text-muted-foreground">{phone}</p>
+        <p className="font-semibold text-base text-center uppercase tracking-tight">{chatDetails.name}</p>
+        <p className="text-[13px] text-muted-foreground font-medium"># {phone}</p>
       </div>
 
       <div className="p-4 space-y-6">

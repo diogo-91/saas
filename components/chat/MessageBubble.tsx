@@ -44,10 +44,10 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
   const isFromMe = msg.fromMe;
 
   const bubbleClass = isFromMe
-    ? 'bg-primary text-primary-foreground ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-sm'
+    ? 'bg-indigo-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-sm'
     : msg.isInternal
-    ? 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-foreground rounded-tr-2xl rounded-br-2xl rounded-tl-sm'
-    : 'bg-background border text-foreground rounded-tr-2xl rounded-br-2xl rounded-tl-sm';
+      ? 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-foreground rounded-tr-2xl rounded-br-2xl rounded-tl-sm'
+      : 'bg-background border text-foreground rounded-tr-2xl rounded-br-2xl rounded-tl-sm';
 
   const renderQuotedMessage = () => {
     if (!msg.quotedMessageText) return null;

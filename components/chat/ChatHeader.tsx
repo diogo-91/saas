@@ -113,9 +113,9 @@ export function ChatHeader({
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="font-semibold text-sm truncate">{chatDetails.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {chatDetails.remoteJid?.split('@')[0]}
+                <p className="font-semibold text-[15px] truncate uppercase">{chatDetails.name}</p>
+                <p className="text-[13px] text-muted-foreground truncate font-medium">
+                  # {chatDetails.remoteJid?.split('@')[0]}
                 </p>
               </div>
             </div>

@@ -119,11 +119,10 @@ export function ChatListItem({
   return (
     <div
       onClick={handleClick}
-      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-border/50 ${
-        isActive
-          ? 'bg-primary/10 border-l-2 border-l-primary'
-          : 'hover:bg-muted/50'
-      } ${isSelected ? 'bg-primary/5' : ''}`}
+      className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-all border-b border-border/40 ${isActive
+          ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-l-[3px] border-l-indigo-600'
+          : 'hover:bg-muted/50 border-l-[3px] border-l-transparent'
+        } ${isSelected ? 'bg-primary/5' : ''}`}
     >
       {isSelectionMode && (
         <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
@@ -139,30 +138,47 @@ export function ChatListItem({
           </AvatarFallback>
         </Avatar>
         {instance && (
-          <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-background border border-border flex items-center justify-center">
-            <div className={`h-2 w-2 rounded-full ${instance.integration === 'WHATSAPP-BAILEYS' ? 'bg-green-500' : 'bg-blue-500'}`} />
+          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-background border-2 border-background flex items-center justify-center">
+            <div className={`h-full w-full rounded-full ${instance.integration === 'WHATSAPP-BAILEYS' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
           </div>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1">
-          <p className={`text-sm truncate ${hasUnread ? 'font-semibold' : 'font-medium'}`}>
+          <p className={`text-[13px] truncate uppercase ${hasUnread ? 'font-bold' : 'font-semibold'}`}>
             {displayName}
           </p>
-          <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">{timeStr}</span>
+          <span className="text-[10px] text-muted-foreground font-medium shrink-0 whitespace-nowrap">{timeStr}</span>
         </div>
-        <div className="flex items-center gap-1 mt-0.5">
-          {chat.lastMessageFromMe && <MessageStatus status={chat.lastMessageStatus} />}
-          {preview.icon}
-          <p className={`text-xs truncate ${hasUnread ? 'text-foreground' : 'text-muted-foreground'}`}>
-            {preview.text || '\u00A0'}
-          </p>
-          {hasUnread && (
-            <Badge className="ml-auto h-5 min-w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5 shrink-0">
-              {chat.unreadCount! > 99 ? '99+' : chat.unreadCount}
-            </Badge>
-          )}
+
+        <div className="flex flex-col mt-[2px] space-y-[3px]">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground/80 font-medium tracking-tight"># {phone}</p>
+            {hasUnread && (
+              <Badge className="h-[18px] min-w-[18px] rounded-full bg-indigo-600 text-white text-[10px] font-bold px-1 shrink-0 flex items-center justify-center">
+                {chat.unreadCount! > 99 ? '99+' : chat.unreadCount}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-hidden h-4">
+            {chat.contact?.tags && chat.contact.tags.length > 0 ? (
+              chat.contact.tags.map(tag => (
+                <span key={tag.id} className="text-[9px] px-1.5 py-[1px] rounded font-bold uppercase truncate max-w-[80px]" style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}30` }}>
+                  {tag.name}
+                </span>
+              ))
+            ) : (
+              <div className="flex items-center gap-1 text-muted-foreground/70">
+                {chat.lastMessageFromMe && <MessageStatus status={chat.lastMessageStatus} />}
+                {preview.icon}
+                <p className="text-[10px] truncate leading-tight">
+                  {preview.text || '\u00A0'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
