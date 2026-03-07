@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { getTeamForUser } from '@/lib/db/queries';
 import { customFields } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,5 +59,3 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
     }
 }
-
-import { and } from 'drizzle-orm';
