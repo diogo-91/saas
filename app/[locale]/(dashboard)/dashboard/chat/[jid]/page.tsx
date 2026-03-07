@@ -483,31 +483,62 @@ export default function ChatPage() {
       return;
     }
 
-    let textContent = `Conversa com ${chatDetails.name} (${chatDetails.remoteJid})\n`;
-    textContent += `Exportado em: ${new Date().toLocaleString()}\n`;
-    textContent += `--------------------------------------------------\n\n`;
+    const contactName = chatDetails.name;
+    const contactJid = chatDetails.remoteJid;
+    const exportDate = new Date().toLocaleString();
+    const agentName = user?.name || user?.email || 'Atendente';
 
-    messages.forEach(msg => {
+    const rows = messages.map(msg => {
       const time = new Date(msg.timestamp).toLocaleString();
-      const sender = msg.fromMe ? (user?.name || user?.email || 'Atendente') : chatDetails.name;
+      const sender = msg.fromMe ? agentName : contactName;
       const content = msg.text || (msg.mediaUrl ? `[Mídia: ${msg.messageType}]` : '[Mensagem não suportada]');
-      if (msg.isInternal) {
-        textContent += `[${time}] NOTA INTERNA (${sender}): ${content}\n`;
-      } else {
-        textContent += `[${time}] ${sender}: ${content}\n`;
-      }
-    });
+      const type = msg.isInternal ? 'Nota Interna' : (msg.fromMe ? 'Enviada' : 'Recebida');
+      const rowColor = msg.isInternal ? '#FEF3C7' : (msg.fromMe ? '#EEF2FF' : '#FFFFFF');
+      return `<tr style="background:${rowColor}">
+        <td>${time}</td>
+        <td>${sender}</td>
+        <td><span style="font-size:11px;font-weight:600;color:${msg.isInternal ? '#D97706' : msg.fromMe ? '#4F46E5' : '#6B7280'}">${type}</span></td>
+        <td>${content}</td>
+      </tr>`;
+    }).join('');
 
-    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `conversa_${chatDetails.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().getTime()}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success('Conversa exportada com sucesso');
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Conversa - ${contactName}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+    h1 { font-size: 18px; margin-bottom: 4px; color: #1E1B4B; }
+    .meta { font-size: 12px; color: #6B7280; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead tr { background: #4F46E5; color: white; }
+    th { padding: 8px 10px; text-align: left; }
+    td { padding: 7px 10px; border-bottom: 1px solid #E5E7EB; vertical-align: top; word-break: break-word; }
+    td:first-child { white-space: nowrap; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <h1>Relatório de Conversa</h1>
+  <p class="meta">Contato: <strong>${contactName}</strong> &nbsp;|&nbsp; ${contactJid}<br>Exportado em: ${exportDate}</p>
+  <table>
+    <thead><tr><th>Data/Hora</th><th>Remetente</th><th>Tipo</th><th>Mensagem</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Pop-up bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 500);
+    toast.success('Preparando PDF para download...');
   };
 
   const renderReplyPreview = () => {
