@@ -27,13 +27,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const navItems = [
-  { href: '/dashboard', label: 'Conversas', icon: MessageCircle },
-  { href: '/contacts', label: 'Contatos', icon: Users },
-  { href: '/analytics', label: 'Relatórios', icon: BarChart3 },
-  { href: '/automation', label: 'Automação', icon: GitMerge },
-  { href: '/templates', label: 'Modelos', icon: LayoutTemplate },
-  { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
-  { href: '/settings/ai', label: 'Agente IA', icon: Bot },
+  { href: '/dashboard', label: 'Conversas', icon: MessageCircle, adminOnly: false },
+  { href: '/contacts', label: 'Contatos', icon: Users, adminOnly: true },
+  { href: '/analytics', label: 'Relatórios', icon: BarChart3, adminOnly: true },
+  { href: '/automation', label: 'Automação', icon: GitMerge, adminOnly: true },
+  { href: '/templates', label: 'Modelos', icon: LayoutTemplate, adminOnly: true },
+  { href: '/campaigns', label: 'Campanhas', icon: Megaphone, adminOnly: true },
+  { href: '/settings/ai', label: 'Agente IA', icon: Bot, adminOnly: true },
 ];
 
 export function Sidebar() {
@@ -49,6 +49,9 @@ export function Sidebar() {
     }
     return normalized.startsWith(href);
   };
+
+  const isMember = user?.role === 'member';
+  const visibleNavItems = navItems.filter(item => !item.adminOnly || !isMember);
 
   const userInitials = (user?.name || user?.email || 'U')
     .split(' ')
@@ -78,7 +81,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {visibleNavItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           const item = (
             <Link
@@ -112,16 +115,18 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="border-t border-slate-800/50 p-2 space-y-1">
-        <Link
-          href="/settings"
-          className={cn(
-            'flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-50 transition-colors',
-            collapsed && 'justify-center'
-          )}
-        >
-          <Settings className="h-4 w-4 shrink-0" />
-          {!collapsed && 'Configurações'}
-        </Link>
+        {!isMember && (
+          <Link
+            href="/settings"
+            className={cn(
+              'flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-50 transition-colors',
+              collapsed && 'justify-center'
+            )}
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            {!collapsed && 'Configurações'}
+          </Link>
+        )}
 
         <div className={cn('flex items-center gap-2 px-2 py-2', collapsed && 'justify-center')}>
           <Avatar className="h-7 w-7 shrink-0">
