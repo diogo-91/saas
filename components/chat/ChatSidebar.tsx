@@ -239,7 +239,8 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
                     onClick={() => {
                       const name = window.prompt('Enter new tag name:');
                       if (!name) return;
-                      const color = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'][Math.floor(Math.random() * 7)];
+                      // Lighter pastel colors more suitable for dark mode readability
+                      const color = ['#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4'][Math.floor(Math.random() * 7)];
 
                       setIsUpdating(true);
                       fetch('/api/tags', {
@@ -297,7 +298,7 @@ export function ChatSidebar({ chatDetails, contactData, onContactUpdate }: ChatS
                   key={tag.id}
                   variant="outline"
                   className="text-xs font-normal border-transparent hover:bg-opacity-80 transition-colors"
-                  style={{ backgroundColor: `${tag.color}20` || '#e2e8f0', color: tag.color || 'inherit' }}
+                  style={{ backgroundColor: `${tag.color}15` || '#e2e8f0', color: tag.color || 'inherit' }}
                 >
                   {tag.name}
                 </Badge>
