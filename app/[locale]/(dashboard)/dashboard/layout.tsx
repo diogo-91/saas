@@ -84,7 +84,10 @@ const SOUNDS = [
   { id: 'sound5', name: 'Glass', src: '/sounds/notification_5.mp3' },
 ];
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => {
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+});
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -258,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [teamId, mutate, soundEnabled, selectedSound, notificationPermission]);
 
   const validChats = useMemo(() => {
-    if (!chats) return [];
+    if (!chats || !Array.isArray(chats)) return [];
 
     return chats.filter((chat) => {
       if (!chat.remoteJid) return false;

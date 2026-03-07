@@ -56,6 +56,7 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       suppressHydrationWarning
+      translate="no"
       className={`bg-background text-foreground ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-background">
