@@ -589,8 +589,8 @@ export default function ContactsPage() {
                     <div className="min-w-max">
 
                         {/* Header */}
-                        <div className="flex border-b border-border/40 bg-muted/30 sticky top-0 z-20">
-                            <div className="w-[50px] shrink-0 border-r border-border/30 flex items-center justify-center px-4 py-3">
+                        <div className="flex border-b-2 border-primary/20 bg-gradient-to-r from-primary/[0.07] via-primary/[0.05] to-primary/[0.04] sticky top-0 z-20">
+                            <div className="w-[50px] shrink-0 border-r border-primary/10 flex items-center justify-center px-4 py-3.5">
                                 <Checkbox
                                     checked={filteredContacts.length > 0 && filteredContacts.every(c => selectedIds.has(c.id))}
                                     onCheckedChange={handleSelectAll}
@@ -600,16 +600,17 @@ export default function ContactsPage() {
                                 <div
                                     key={col.id}
                                     style={{ width: col.width, minWidth: col.width }}
-                                    className="relative px-4 py-3 text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.1em] flex items-center shrink-0 border-r border-border/30 last:border-r-0 select-none"
+                                    className="relative px-4 py-3.5 text-[10px] font-extrabold text-primary/60 uppercase tracking-[0.12em] flex items-center shrink-0 border-r border-primary/10 last:border-r-0 select-none gap-1.5"
                                 >
+                                    <span className="w-1 h-1 rounded-full bg-primary/40 shrink-0" />
                                     <span className="truncate">{col.label}</span>
                                     <div
-                                        className="absolute right-0 top-1/4 bottom-1/4 w-0.5 cursor-col-resize hover:bg-primary/50 transition-colors rounded-full"
+                                        className="absolute right-0 top-1/4 bottom-1/4 w-0.5 cursor-col-resize hover:bg-primary/60 transition-colors rounded-full"
                                         onMouseDown={(e) => handleMouseDown(e, col.id)}
                                     />
                                 </div>
                             ))}
-                            <div className="w-[60px] shrink-0 border-l border-border/30 sticky right-0 z-30 ml-auto bg-muted/30" />
+                            <div className="w-[60px] shrink-0 border-l border-primary/10 sticky right-0 z-30 ml-auto bg-primary/[0.04]" />
                         </div>
 
                         {/* Rows */}
