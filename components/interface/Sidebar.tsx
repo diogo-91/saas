@@ -30,10 +30,10 @@ const navItems = [
   { href: '/dashboard',   label: 'Conversas', icon: MessageCircle,  adminOnly: false, hidden: false },
   { href: '/contacts',    label: 'Contatos',  icon: Users,           adminOnly: false, hidden: false },
   { href: '/analytics',   label: 'Relatórios',icon: BarChart3,       adminOnly: true,  hidden: false },
-  { href: '/automation',  label: 'Automação', icon: GitMerge,        adminOnly: true,  hidden: false },
+  { href: '/automation',  label: 'Automação', icon: GitMerge,        adminOnly: true,  hidden: true  },
   { href: '/templates',   label: 'Modelos',   icon: LayoutTemplate,  adminOnly: true,  hidden: true  },
   { href: '/campaigns',   label: 'Campanhas', icon: Megaphone,       adminOnly: true,  hidden: true  },
-  { href: '/settings/ai', label: 'Agente IA', icon: Bot,             adminOnly: true,  hidden: false },
+  { href: '/settings/ai', label: 'Agente IA', icon: Bot,             adminOnly: true,  hidden: true  },
 ];
 
 export function Sidebar() {
