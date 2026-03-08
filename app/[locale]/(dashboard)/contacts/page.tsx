@@ -103,10 +103,10 @@ export default function ContactsPage() {
     const [importFile, setImportFile] = useState<File | null>(null);
 
     const [columns, setColumns] = useState<ColumnDef[]>([
-        { id: 'contact', label: 'Contact', visible: true, width: 300, type: 'system' },
-        { id: 'stage', label: 'Stage', visible: true, width: 150, type: 'system' },
-        { id: 'agent', label: 'Agent', visible: true, width: 150, type: 'system' },
-        { id: 'tags', label: 'Tags', visible: true, width: 200, type: 'system' },
+        { id: 'contact', label: 'Contato', visible: true, width: 300, type: 'system' },
+        { id: 'stage', label: 'Etapa', visible: true, width: 150, type: 'system' },
+        { id: 'agent', label: 'Agente', visible: true, width: 150, type: 'system' },
+        { id: 'tags', label: 'Etiquetas', visible: true, width: 200, type: 'system' },
     ]);
 
     useEffect(() => {
@@ -411,9 +411,9 @@ export default function ContactsPage() {
             if(!res.ok) throw new Error("Err");
             mutate('/api/custom-fields');
             setNewFieldName('');
-            toast.success("Field created");
+            toast.success("Campo criado com sucesso");
         } catch(e) {
-            toast.error("Error creating field");
+            toast.error("Erro ao criar campo");
         } finally {
             setIsSaving(false);
         }
@@ -423,8 +423,8 @@ export default function ContactsPage() {
         try {
             await fetch(`/api/custom-fields?id=${id}`, { method: 'DELETE' });
             mutate('/api/custom-fields');
-            toast.success("Field deleted");
-        } catch(e) { toast.error("Error"); }
+            toast.success("Campo excluído");
+        } catch(e) { toast.error("Erro ao excluir campo"); }
     };
 
     const handleMouseDown = (e: React.MouseEvent, colId: string) => {
@@ -452,12 +452,19 @@ export default function ContactsPage() {
             <header className="flex justify-between items-center mb-6 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">{t('header_title')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('header_subtitle')}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-sm text-muted-foreground">{t('header_subtitle')}</p>
+                        {!loadingContacts && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                {filteredContacts.length}{filteredContacts.length !== (contacts?.length || 0) && ` de ${contacts?.length || 0}`} {(contacts?.length || 0) === 1 ? 'contato' : 'contatos'}
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="flex gap-2">
                      <Button variant="outline" onClick={() => setIsFieldsManagerOpen(true)}>
                         <Settings2 className="h-4 w-4 mr-2"/>
-                        Custom Fields
+                        Campos Customizados
                      </Button>
                      <Button onClick={() => setIsImportOpen(true)}>
                         <Upload className="h-4 w-4 mr-2"/>
@@ -486,7 +493,7 @@ export default function ContactsPage() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                                <DropdownMenuLabel>Colunas Visíveis</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {columns.map(col => (
                                     <DropdownMenuCheckboxItem
@@ -566,38 +573,44 @@ export default function ContactsPage() {
             <div className="flex-1 bg-background rounded-xl border border-border shadow-sm overflow-hidden flex flex-col relative">
                 <div className="flex-1 overflow-auto">
                     <div className="min-w-max"> 
-                        <div className="flex border-b bg-muted/50 sticky top-0 z-20">
-                            <div className="w-[50px] shrink-0 border-r flex items-center justify-center px-4 py-3 bg-muted/50">
-                                <Checkbox 
+                        <div className="flex border-b bg-muted/60 sticky top-0 z-20">
+                            <div className="w-[50px] shrink-0 border-r flex items-center justify-center px-4 py-3 bg-muted/60">
+                                <Checkbox
                                     checked={filteredContacts.length > 0 && filteredContacts.every(c => selectedIds.has(c.id))}
                                     onCheckedChange={handleSelectAll}
                                 />
                             </div>
                             {columns.filter(c => c.visible).map(col => (
-                                <div 
-                                    key={col.id} 
+                                <div
+                                    key={col.id}
                                     style={{ width: col.width, minWidth: col.width }}
-                                    className="relative px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center shrink-0 border-r last:border-r-0 bg-muted/50"
+                                    className="relative px-4 py-3 text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-widest flex items-center shrink-0 border-r last:border-r-0 bg-muted/60 select-none"
                                 >
                                     <span className="truncate">{col.label}</span>
-                                    <div 
-                                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors"
+                                    <div
+                                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/40 transition-colors rounded"
                                         onMouseDown={(e) => handleMouseDown(e, col.id)}
                                     />
                                 </div>
                             ))}
-                            <div className="w-[60px] shrink-0 border-l bg-muted/95 backdrop-blur-sm px-4 py-3 flex justify-center sticky right-0 z-30 ml-auto shadow-[-5px_0px_10px_rgba(0,0,0,0.02)]"></div>
+                            <div className="w-[60px] shrink-0 border-l bg-muted/60 px-4 py-3 flex justify-center sticky right-0 z-30 ml-auto shadow-[-5px_0px_10px_rgba(0,0,0,0.02)]"></div>
                         </div>
 
                         <div className="">
                             {loadingContacts || loadingFields ? (
-                                <div className="flex justify-center items-center h-40 w-full">
-                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                <div className="flex flex-col justify-center items-center h-40 w-full gap-3">
+                                    <Loader2 className="h-7 w-7 animate-spin text-primary/50" />
+                                    <p className="text-sm text-muted-foreground">Carregando contatos...</p>
                                 </div>
                             ) : filteredContacts.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground w-full">
-                                    <UserIcon className="h-12 w-12 mb-2 opacity-20" />
-                                    <p>{t('no_contacts_found')}</p>
+                                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground w-full gap-3">
+                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                                        <UserIcon className="h-8 w-8 opacity-30" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-medium text-foreground/70">{t('no_contacts_found')}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Tente ajustar os filtros ou a busca</p>
+                                    </div>
                                 </div>
                             ) : (
                                 filteredContacts.map(contact => (
@@ -616,54 +629,63 @@ export default function ContactsPage() {
                                             >
                                                 {col.id === 'contact' && (
                                                     <div className="flex items-center gap-3 overflow-hidden w-full">
-                                                        <Avatar className="h-10 w-10 border border-border shrink-0">
+                                                        <Avatar className="h-9 w-9 border border-border/50 shrink-0">
                                                             <AvatarImage src={contact.profilePicUrl} />
-                                                            <AvatarFallback className="bg-primary/10 text-primary">{contact.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{contact.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                                                         </Avatar>
                                                         <div className="overflow-hidden">
-                                                            <p className="font-medium text-foreground truncate">{contact.name}</p>
-                                                            <div className="flex items-center text-xs text-muted-foreground truncate">
-                                                                <Phone className="h-3 w-3 mr-1" />
-                                                                {contact.phone || 'N/A'}
+                                                            <p className="font-medium text-foreground truncate text-sm">{contact.name}</p>
+                                                            <div className="flex items-center text-xs text-muted-foreground truncate mt-0.5">
+                                                                <Phone className="h-3 w-3 mr-1 shrink-0" />
+                                                                {contact.phone || '—'}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 )}
                                                 {col.id === 'stage' && (
                                                     contact.funnelStage ? (
-                                                        <Badge variant="outline" className="bg-muted font-normal border-border truncate">
-                                                            {contact.funnelStage.emoji} {contact.funnelStage.name}
+                                                        <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800 font-medium truncate gap-1">
+                                                            {contact.funnelStage.emoji && <span>{contact.funnelStage.emoji}</span>}
+                                                            {contact.funnelStage.name}
                                                         </Badge>
-                                                    ) : <span className="text-xs text-muted-foreground italic">{t('no_stage')}</span>
+                                                    ) : <span className="text-xs text-muted-foreground/60 italic">{t('no_stage')}</span>
                                                 )}
                                                 {col.id === 'agent' && (
                                                     contact.assignedUser ? (
                                                         <div className="flex items-center gap-2 overflow-hidden">
                                                             <Avatar className="h-6 w-6 shrink-0">
-                                                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                                                <AvatarFallback className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
                                                                     {contact.assignedUser.name.substring(0, 2).toUpperCase()}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             <span className="text-sm text-foreground truncate">{contact.assignedUser.name}</span>
                                                         </div>
-                                                    ) : <span className="text-xs text-muted-foreground italic">{t('unassigned')}</span>
+                                                    ) : <span className="text-xs text-muted-foreground/60 italic">{t('unassigned')}</span>
                                                 )}
                                                 {col.id === 'tags' && (
                                                     <div className="flex gap-1 overflow-hidden flex-nowrap">
-                                                        {contact.tags.slice(0, 2).map(tag => (
-                                                            <Badge key={tag.id} variant="secondary" className="text-[10px] px-1.5 h-5 shrink-0">
+                                                        {contact.tags.slice(0, 3).map(tag => (
+                                                            <span
+                                                                key={tag.id}
+                                                                className="inline-flex items-center text-[10px] px-2 h-5 rounded-full font-medium shrink-0 border"
+                                                                style={{
+                                                                    backgroundColor: tag.color ? `${tag.color}18` : undefined,
+                                                                    borderColor: tag.color ? `${tag.color}40` : undefined,
+                                                                    color: tag.color || undefined,
+                                                                }}
+                                                            >
                                                                 {tag.name}
-                                                            </Badge>
+                                                            </span>
                                                         ))}
-                                                        {contact.tags.length > 2 && (
-                                                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 shrink-0">+{contact.tags.length - 2}</Badge>
+                                                        {contact.tags.length > 3 && (
+                                                            <span className="inline-flex items-center text-[10px] px-2 h-5 rounded-full font-medium shrink-0 border bg-muted text-muted-foreground">+{contact.tags.length - 3}</span>
                                                         )}
                                                     </div>
                                                 )}
                                                 {col.isCustom && contact.customData && (
                                                     <span className="text-sm text-foreground truncate">
-                                                        {col.type === 'boolean' 
-                                                            ? (contact.customData[col.fieldKey!] ? 'Yes' : 'No')
+                                                        {col.type === 'boolean'
+                                                            ? (contact.customData[col.fieldKey!] ? 'Sim' : 'Não')
                                                             : contact.customData[col.fieldKey!]
                                                         }
                                                     </span>
@@ -698,22 +720,22 @@ export default function ContactsPage() {
             <Dialog open={isFieldsManagerOpen} onOpenChange={setIsFieldsManagerOpen}>
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Manage Custom Fields</DialogTitle>
-                        <DialogDescription>Add or remove custom fields for your contacts.</DialogDescription>
+                        <DialogTitle>Gerenciar Campos Customizados</DialogTitle>
+                        <DialogDescription>Adicione ou remova campos customizados para seus contatos.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="flex gap-2 items-end">
                             <div className="grid gap-2 flex-1">
-                                <Label>Field Name</Label>
-                                <Input value={newFieldName} onChange={e => setNewFieldName(e.target.value)} placeholder="e.g. CPF, Birthday" />
+                                <Label>Nome do Campo</Label>
+                                <Input value={newFieldName} onChange={e => setNewFieldName(e.target.value)} placeholder="Ex: CPF, Data de Nascimento" />
                             </div>
                             <div className="grid gap-2 w-[140px]">
-                                <Label>Type</Label>
+                                <Label>Tipo</Label>
                                 <Select value={newFieldType} onValueChange={(v: any) => setNewFieldType(v)}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="text">Text</SelectItem>
-                                        <SelectItem value="boolean">Boolean</SelectItem>
+                                        <SelectItem value="text">Texto</SelectItem>
+                                        <SelectItem value="boolean">Sim/Não</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -721,18 +743,18 @@ export default function ContactsPage() {
                                 <Plus className="h-4 w-4" />
                             </Button>
                         </div>
-                        
+
                         <div className="border rounded-md mt-4">
                             <div className="bg-muted p-2 text-xs font-semibold grid grid-cols-12 gap-2">
-                                <div className="col-span-6">Name</div>
-                                <div className="col-span-4">Type</div>
-                                <div className="col-span-2 text-right">Action</div>
+                                <div className="col-span-6">Nome</div>
+                                <div className="col-span-4">Tipo</div>
+                                <div className="col-span-2 text-right">Ação</div>
                             </div>
                             <div className="max-h-[300px] overflow-y-auto">
                                 {customFields?.map(field => (
                                     <div key={field.id} className="p-2 border-t grid grid-cols-12 gap-2 items-center text-sm">
                                         <div className="col-span-6 font-medium">{field.name}</div>
-                                        <div className="col-span-4 text-muted-foreground capitalize">{field.type}</div>
+                                        <div className="col-span-4 text-muted-foreground">{field.type === 'text' ? 'Texto' : 'Sim/Não'}</div>
                                         <div className="col-span-2 text-right">
                                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteField(field.id)}>
                                                 <Trash2 className="h-3 w-3" />
@@ -741,7 +763,7 @@ export default function ContactsPage() {
                                     </div>
                                 ))}
                                 {(!customFields || customFields.length === 0) && (
-                                    <div className="p-4 text-center text-muted-foreground text-sm">No custom fields created.</div>
+                                    <div className="p-4 text-center text-muted-foreground text-sm">Nenhum campo customizado criado.</div>
                                 )}
                             </div>
                         </div>
@@ -846,7 +868,7 @@ export default function ContactsPage() {
                         {customFields && customFields.length > 0 && (
                             <>
                                 <div className="border-t my-2" />
-                                <Label className="text-xs font-semibold text-muted-foreground uppercase">Custom Fields</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase">Campos Customizados</Label>
                                 <div className="grid gap-3">
                                     {customFields.map(cf => (
                                         <div key={cf.id} className="grid gap-1.5">
@@ -857,7 +879,7 @@ export default function ContactsPage() {
                                                         checked={!!editCustomData[cf.key]} 
                                                         onCheckedChange={(checked) => setEditCustomData(prev => ({ ...prev, [cf.key]: checked }))} 
                                                     />
-                                                    <span className="text-sm text-muted-foreground">{editCustomData[cf.key] ? 'Yes' : 'No'}</span>
+                                                    <span className="text-sm text-muted-foreground">{editCustomData[cf.key] ? 'Sim' : 'Não'}</span>
                                                 </div>
                                             ) : (
                                                 <Input 

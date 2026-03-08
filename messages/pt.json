@@ -935,6 +935,27 @@
       "update_error": "Erro ao atualizar contato",
       "delete_success": "Contato excluído",
       "delete_error": "Erro ao excluir contato"
+    },
+    "import_btn": "Importar",
+    "bulk_delete_dialog": {
+      "title": "Excluir Contatos Selecionados?",
+      "description": "Tem certeza que deseja excluir {count} contatos? Esta ação não pode ser desfeita.",
+      "cancel_btn": "Cancelar",
+      "confirm_btn": "Excluir Todos"
+    },
+    "import_dialog": {
+      "title": "Importar Contatos",
+      "description": "Importe contatos a partir de uma planilha Excel (.xlsx).",
+      "drag_text": "Arraste e solte ou clique para selecionar um arquivo .xlsx",
+      "select_file": "Selecionar Arquivo",
+      "template_title": "Baixar Template",
+      "template_desc": "Use nosso template para formatar sua planilha corretamente.",
+      "download_btn": "Baixar Template",
+      "cancel_btn": "Cancelar",
+      "upload_btn": "Importar",
+      "empty_file": "O arquivo está vazio.",
+      "success": "{imported} contatos importados com sucesso ({failed} com erro).",
+      "error": "Erro ao importar contatos."
     }
   }
 }
