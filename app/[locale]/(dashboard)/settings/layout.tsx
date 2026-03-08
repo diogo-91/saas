@@ -47,12 +47,7 @@ export default function SettingsLayout({
       label: t('nav.instances'), 
       description: t('nav.instances_desc') 
     },
-    { 
-      href: '/settings/ai', 
-      icon: Bot, 
-      label: t('nav.ai'), 
-      description: t('nav.ai_desc') 
-    },
+    // { href: '/settings/ai', icon: Bot, label: t('nav.ai'), description: t('nav.ai_desc') }, // hidden
     { 
       href: '/settings/developers', 
       icon: Terminal, 
@@ -164,6 +159,7 @@ export default function SettingsLayout({
             })}
           </nav>
           
+          {/* "Precisa de ajuda?" — hidden
           <div className="p-4 border-t bg-muted/10 mt-auto shrink-0">
             <div className="bg-gradient-to-br from-card to-muted border rounded-xl p-4 shadow-sm flex gap-3 items-start">
                 <div className="bg-background p-2 rounded-full shrink-0 shadow-sm">
@@ -177,6 +173,7 @@ export default function SettingsLayout({
                 </div>
             </div>
           </div>
+          */}
         </aside>
 
         <main className="flex-1 overflow-y-auto bg-muted/5 p-4 lg:p-8 scroll-smooth w-full">

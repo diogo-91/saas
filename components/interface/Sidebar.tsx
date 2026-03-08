@@ -27,13 +27,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const navItems = [
-  { href: '/dashboard', label: 'Conversas', icon: MessageCircle, adminOnly: false },
-  { href: '/contacts', label: 'Contatos', icon: Users, adminOnly: false },
-  { href: '/analytics', label: 'Relatórios', icon: BarChart3, adminOnly: true },
-  { href: '/automation', label: 'Automação', icon: GitMerge, adminOnly: true },
-  { href: '/templates', label: 'Modelos', icon: LayoutTemplate, adminOnly: true },
-  { href: '/campaigns', label: 'Campanhas', icon: Megaphone, adminOnly: true },
-  { href: '/settings/ai', label: 'Agente IA', icon: Bot, adminOnly: true },
+  { href: '/dashboard',   label: 'Conversas', icon: MessageCircle,  adminOnly: false, hidden: false },
+  { href: '/contacts',    label: 'Contatos',  icon: Users,           adminOnly: false, hidden: false },
+  { href: '/analytics',   label: 'Relatórios',icon: BarChart3,       adminOnly: true,  hidden: false },
+  { href: '/automation',  label: 'Automação', icon: GitMerge,        adminOnly: true,  hidden: false },
+  { href: '/templates',   label: 'Modelos',   icon: LayoutTemplate,  adminOnly: true,  hidden: true  },
+  { href: '/campaigns',   label: 'Campanhas', icon: Megaphone,       adminOnly: true,  hidden: true  },
+  { href: '/settings/ai', label: 'Agente IA', icon: Bot,             adminOnly: true,  hidden: false },
 ];
 
 export function Sidebar() {
@@ -53,7 +53,7 @@ export function Sidebar() {
 
   const myTeamMember = teamData?.teamMembers?.find((tm: any) => tm.userId === user?.id);
   const isMember = myTeamMember?.role === 'member';
-  const visibleNavItems = navItems.filter(item => !item.adminOnly || !isMember);
+  const visibleNavItems = navItems.filter(item => !item.hidden && (!item.adminOnly || !isMember));
 
   const userInitials = (user?.name || user?.email || 'U')
     .split(' ')
