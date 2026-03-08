@@ -71,7 +71,10 @@ export default function ContactsPage() {
     const { data: funnelStages } = useSWR<any[]>('/api/funnel-stages', fetcher);
     const { data: allTags } = useSWR<any[]>('/api/tags', fetcher);
     const { data: rawCustomFields, isLoading: loadingFields } = useSWR('/api/custom-fields', fetcher);
-    const customFields: CustomField[] = Array.isArray(rawCustomFields) ? rawCustomFields : [];
+    const customFields = useMemo<CustomField[]>(
+        () => Array.isArray(rawCustomFields) ? rawCustomFields : [],
+        [rawCustomFields]
+    );
     
     const agents = teamData?.teamMembers?.map((tm: any) => tm.user) || [];
 
