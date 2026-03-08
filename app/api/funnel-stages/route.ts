@@ -2,9 +2,21 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { getTeamForUser } from '@/lib/db/queries';
 import { funnelStages } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
+
+const DEFAULT_STAGES = [
+  { name: 'Novo',             emoji: '🆕', order: 1 },
+  { name: 'Em qualificação',  emoji: '🔍', order: 2 },
+  { name: 'Agendado',         emoji: '📅', order: 3 },
+  { name: 'Confirmado',       emoji: '✅', order: 4 },
+  { name: 'Finalizado',       emoji: '🏆', order: 5 },
+  { name: 'Não agendado',     emoji: '❌', order: 6 },
+];
+
+// Old English stage names that should be migrated automatically
+const LEGACY_STAGE_NAMES = ['New', 'Negotiation', 'Won', 'Lost'];
 
 export async function GET() {
   try {
@@ -16,18 +28,24 @@ export async function GET() {
       orderBy: (funnelStages, { asc }) => [asc(funnelStages.order)],
     });
 
-    if (stages.length === 0) {
-        const defaultStages = [
-            { teamId: team.id, name: 'New', emoji: '🆕', order: 1 },
-            { teamId: team.id, name: 'Negotiation', emoji: '💼', order: 2 },
-            { teamId: team.id, name: 'Won', emoji: '🔥', order: 3 },
-            { teamId: team.id, name: 'Lost', emoji: '🧊', order: 4 },
-        ];
+    // Auto-migrate teams that still have the old English default stages
+    const isLegacy =
+      stages.length > 0 &&
+      stages.every((s) => LEGACY_STAGE_NAMES.includes(s.name)) &&
+      stages.length <= LEGACY_STAGE_NAMES.length;
 
-        const newStages = await db.insert(funnelStages)
-            .values(defaultStages)
-            .returning();
-        return NextResponse.json(newStages);
+    if (stages.length === 0 || isLegacy) {
+      if (isLegacy) {
+        // Remove old stages before inserting new ones
+        await db.delete(funnelStages).where(eq(funnelStages.teamId, team.id));
+      }
+
+      const newStages = await db
+        .insert(funnelStages)
+        .values(DEFAULT_STAGES.map((s) => ({ ...s, teamId: team.id })))
+        .returning();
+
+      return NextResponse.json(newStages);
     }
 
     return NextResponse.json(stages);
