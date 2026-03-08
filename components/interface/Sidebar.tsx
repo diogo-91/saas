@@ -28,7 +28,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const navItems = [
   { href: '/dashboard', label: 'Conversas', icon: MessageCircle, adminOnly: false },
-  { href: '/contacts', label: 'Contatos', icon: Users, adminOnly: true },
+  { href: '/contacts', label: 'Contatos', icon: Users, adminOnly: false },
   { href: '/analytics', label: 'Relatórios', icon: BarChart3, adminOnly: true },
   { href: '/automation', label: 'Automação', icon: GitMerge, adminOnly: true },
   { href: '/templates', label: 'Modelos', icon: LayoutTemplate, adminOnly: true },
