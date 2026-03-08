@@ -90,7 +90,6 @@ export default function KanbanBoard() {
         if (stages.length > 0 && chats) {
             const newCols: Record<string, ChatCard[]> = {};
             stages.forEach(s => newCols[s.id] = []);
-            newCols['unassigned'] = [];
 
             chats.forEach(chat => {
                 const card: ChatCard = {
@@ -107,13 +106,11 @@ export default function KanbanBoard() {
                     instanceId: chat.instanceId
                 };
 
-                if (chat.contact && chat.contact.funnelStage) {
+                if (chat.contact?.funnelStage) {
                     const stageId = chat.contact.funnelStage.id;
                     if (newCols[stageId]) newCols[stageId].push(card);
-                    else newCols['unassigned'].push(card);
-                } else if (chat.contact) {
-                    newCols['unassigned'].push(card);
                 }
+                // Contacts without a stage are not shown (auto-assigned to Novo on first message)
             });
             setColumns(newCols);
         }
@@ -168,7 +165,7 @@ export default function KanbanBoard() {
             if (!movedItem.contactId) {
                 mutateChats(); return;
             }
-            const newStageId = destColId === 'unassigned' ? null : parseInt(destColId);
+            const newStageId = parseInt(destColId);
             await fetch(`/api/contacts/${movedItem.contactId}/funnel-stage`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -293,26 +290,6 @@ export default function KanbanBoard() {
                     <Droppable droppableId="board" direction="horizontal" type="COLUMN">
                         {(provided) => (
                             <div className="flex h-full gap-4 pb-4 min-w-max px-1" ref={provided.innerRef} {...provided.droppableProps}>
-                                <div className="flex flex-col w-80 bg-muted/50 dark:bg-muted/20 rounded-xl border h-full max-h-full">
-                                    <div className="p-3 border-b bg-slate-900 border-slate-800 rounded-t-xl flex justify-between items-center sticky top-0 z-10">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">📍</span>
-                                            <h3 className="font-semibold text-slate-50 text-sm uppercase">{t('unassigned')}</h3>
-                                        </div>
-                                        <Badge variant="secondary" className="bg-slate-800 text-slate-50 hover:bg-slate-700">{columns['unassigned']?.length || 0}</Badge>
-                                    </div>
-                                    <Droppable droppableId="unassigned" type="CARD">
-                                        {(prov, snap) => (
-                                            <div {...prov.droppableProps} ref={prov.innerRef} className={`flex-1 overflow-y-auto p-2 space-y-2 ${snap.isDraggingOver ? 'bg-primary/10' : ''}`}>
-                                                {(columns['unassigned'] || []).map((card, idx) => (
-                                                    <CardItem key={card.id} card={card} index={idx} toggleAlert={handleToggleAlert} t={t} />
-                                                ))}
-                                                {prov.placeholder}
-                                            </div>
-                                        )}
-                                    </Droppable>
-                                </div>
-
                                 {stages.map((stage, index) => (
                                     <Draggable key={stage.id} draggableId={stage.id.toString()} index={index}>
                                         {(provided) => (

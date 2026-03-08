@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/drizzle';
-import { chats, messages, evolutionInstances } from '@/lib/db/schema';
+import { chats, messages, evolutionInstances, contacts, funnelStages } from '@/lib/db/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { pusherServer } from '@/lib/pusher-server';
 import fs from 'fs/promises';
@@ -190,6 +190,91 @@ async function sendAiTextMessage(instance: any, remoteJid: string, text: string,
             remoteJid 
         });
     }
+}
+
+// ─── Keywords for stage detection ─────────────────────────────────────────
+const SCHEDULING_KEYWORDS = [
+  'agendar', 'agendei', 'agendado', 'agendamento',
+  'marcar', 'marque', 'marquei', 'marcado', 'marcar consulta',
+  'quero marcar', 'me marca', 'quero consulta', 'quero uma consulta',
+  'quero agendar', 'pode marcar', 'vou marcar',
+];
+
+const CONFIRMATION_KEYWORDS = [
+  'confirmo', 'confirmei', 'confirmado', 'confirmar',
+  'vou sim', 'estarei lá', 'estarei presente', 'pode contar',
+  'vou lá', 'combinado', 'perfeito', 'tá bom', 'ta bom',
+  'ok confirmado', 'confirmo presença',
+];
+
+async function processFunnelStageTransition(
+  teamId: number,
+  chatId: number,
+  messageText: string | null,
+) {
+  try {
+    const contact = await db.query.contacts.findFirst({
+      where: and(eq(contacts.chatId, chatId), eq(contacts.teamId, teamId)),
+      columns: { id: true, funnelStageId: true },
+    });
+
+    if (!contact) return;
+
+    const stages = await db.query.funnelStages.findMany({
+      where: eq(funnelStages.teamId, teamId),
+      columns: { id: true, name: true },
+    });
+
+    const stageByName: Record<string, number> = {};
+    const stageById: Record<number, string> = {};
+    for (const s of stages) {
+      stageByName[s.name] = s.id;
+      stageById[s.id] = s.name;
+    }
+
+    const currentStageName = contact.funnelStageId ? stageById[contact.funnelStageId] : null;
+    const text = messageText?.toLowerCase() ?? '';
+    let newStageId: number | null = null;
+
+    // Rule 1: No stage → Novo (first contact)
+    if (!contact.funnelStageId && stageByName['Novo']) {
+      newStageId = stageByName['Novo'];
+    }
+
+    // Rule 2: Novo → Em qualificação (contact replies after agent responded)
+    else if (currentStageName === 'Novo' && stageByName['Em qualificação']) {
+      const agentMessage = await db.query.messages.findFirst({
+        where: and(eq(messages.chatId, chatId), eq(messages.fromMe, true)),
+        columns: { id: true },
+      });
+      if (agentMessage) {
+        newStageId = stageByName['Em qualificação'];
+      }
+    }
+
+    // Rule 3: Em qualificação → Agendado (scheduling keyword detected)
+    else if (currentStageName === 'Em qualificação' && stageByName['Agendado']) {
+      if (SCHEDULING_KEYWORDS.some((kw) => text.includes(kw))) {
+        newStageId = stageByName['Agendado'];
+      }
+    }
+
+    // Rule 4: Agendado → Confirmado (confirmation keyword detected)
+    else if (currentStageName === 'Agendado' && stageByName['Confirmado']) {
+      if (CONFIRMATION_KEYWORDS.some((kw) => text.includes(kw))) {
+        newStageId = stageByName['Confirmado'];
+      }
+    }
+
+    if (newStageId && newStageId !== contact.funnelStageId) {
+      await db
+        .update(contacts)
+        .set({ funnelStageId: newStageId, updatedAt: new Date() })
+        .where(eq(contacts.id, contact.id));
+    }
+  } catch (e: any) {
+    console.error('[funnel] stage transition error:', e.message);
+  }
 }
 
 export async function POST(request: Request) {
@@ -471,6 +556,11 @@ export async function POST(request: Request) {
       
       if (chatUpdateData) {
           await pusherServer.trigger(pusherChannel, 'chat-list-update', chatUpdateData);
+      }
+
+      // Auto-transition funnel stage (incoming messages only)
+      if (!messageData.key.fromMe && chatIdForAutomation) {
+        processFunnelStageTransition(teamId, chatIdForAutomation, textForAutomation);
       }
 
       if (!messageData.key.fromMe && chatIdForAutomation) {
