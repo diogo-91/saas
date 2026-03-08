@@ -447,77 +447,90 @@ export default function ContactsPage() {
         document.addEventListener('mouseup', handleMouseUp);
     };
 
+    const getAvatarColor = (name: string) => {
+        const palette = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#3b82f6','#f97316'];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return palette[Math.abs(hash) % palette.length];
+    };
+
     return (
-        <div className="flex flex-col h-full bg-muted p-6 overflow-hidden">
-            <header className="flex justify-between items-center mb-6 shrink-0">
+        <div className="flex flex-col h-full bg-muted/40 p-6 gap-5 overflow-hidden">
+
+            {/* ── HEADER ──────────────────────────────────── */}
+            <header className="flex justify-between items-start shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">{t('header_title')}</h1>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('header_title')}</h1>
+                    <div className="flex items-center gap-2 mt-1">
                         <p className="text-sm text-muted-foreground">{t('header_subtitle')}</p>
-                        {!loadingContacts && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                                {filteredContacts.length}{filteredContacts.length !== (contacts?.length || 0) && ` de ${contacts?.length || 0}`} {(contacts?.length || 0) === 1 ? 'contato' : 'contatos'}
+                        {!loadingContacts && contacts && (
+                            <span className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-semibold tabular-nums">
+                                {filteredContacts.length !== contacts.length
+                                    ? `${filteredContacts.length} de ${contacts.length}`
+                                    : `${contacts.length}`} {contacts.length === 1 ? 'contato' : 'contatos'}
                             </span>
                         )}
                     </div>
                 </div>
-                <div className="flex gap-2">
-                     <Button variant="outline" onClick={() => setIsFieldsManagerOpen(true)}>
+                <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" className="h-9 shadow-sm" onClick={() => setIsFieldsManagerOpen(true)}>
                         <Settings2 className="h-4 w-4 mr-2"/>
                         Campos Customizados
-                     </Button>
-                     <Button onClick={() => setIsImportOpen(true)}>
+                    </Button>
+                    <Button size="sm" className="h-9 shadow-sm" onClick={() => setIsImportOpen(true)}>
                         <Upload className="h-4 w-4 mr-2"/>
                         {t('import_btn')}
-                     </Button>
+                    </Button>
                 </div>
             </header>
 
-            <div className="flex flex-col gap-4 mb-4 shrink-0">
-                <div className="flex items-center gap-4">
+            {/* ── TOOLBAR ─────────────────────────────────── */}
+            <div className="flex flex-col gap-3 shrink-0">
+                {/* Search + actions */}
+                <div className="flex items-center gap-3">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder={t('search_placeholder')} 
-                            className="pl-10 bg-background"
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                        <Input
+                            placeholder={t('search_placeholder')}
+                            className="pl-10 h-10 bg-background shadow-sm border-border/50 focus-visible:ring-1"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
-                    
-                    <div className="flex gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="bg-background">
-                                    <Filter className="h-4 w-4 mr-2" /> {t('columns_btn')}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuLabel>Colunas Visíveis</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {columns.map(col => (
-                                    <DropdownMenuCheckboxItem
-                                        key={col.id}
-                                        checked={col.visible}
-                                        onCheckedChange={(checked) => {
-                                            setColumns(prev => prev.map(c => c.id === col.id ? { ...c, visible: checked } : c));
-                                        }}
-                                    >
-                                        {col.label}
-                                    </DropdownMenuCheckboxItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <Button variant="outline" className="bg-background" onClick={handleExport}>
-                            <FileSpreadsheet className="h-4 w-4 mr-2" /> {t('export_btn')}
-                        </Button>
-                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-10 bg-background shadow-sm border-border/50">
+                                <Filter className="h-4 w-4 mr-2" /> {t('columns_btn')}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuLabel>Colunas Visíveis</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {columns.map(col => (
+                                <DropdownMenuCheckboxItem
+                                    key={col.id}
+                                    checked={col.visible}
+                                    onCheckedChange={(checked) => setColumns(prev => prev.map(c => c.id === col.id ? { ...c, visible: checked } : c))}
+                                >
+                                    {col.label}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="outline" className="h-10 bg-background shadow-sm border-border/50" onClick={handleExport}>
+                        <FileSpreadsheet className="h-4 w-4 mr-2" /> {t('export_btn')}
+                    </Button>
                 </div>
 
-                <div className="flex gap-4 items-center overflow-x-auto pb-1">
+                {/* Filter pills + bulk actions */}
+                <div className="flex gap-2 items-center flex-wrap">
                     <Select value={filterAgent} onValueChange={setFilterAgent}>
-                        <SelectTrigger className="w-[180px] bg-background">
+                        <SelectTrigger className="h-8 w-auto min-w-[148px] rounded-full text-xs bg-background border-border/50 shadow-sm px-3">
                             <SelectValue placeholder={t('filter_agent')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -530,7 +543,7 @@ export default function ContactsPage() {
                     </Select>
 
                     <Select value={filterStage} onValueChange={setFilterStage}>
-                        <SelectTrigger className="w-[180px] bg-background">
+                        <SelectTrigger className="h-8 w-auto min-w-[148px] rounded-full text-xs bg-background border-border/50 shadow-sm px-3">
                             <SelectValue placeholder={t('filter_stage')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -543,7 +556,7 @@ export default function ContactsPage() {
                     </Select>
 
                     <Select value={filterTag} onValueChange={setFilterTag}>
-                        <SelectTrigger className="w-[180px] bg-background">
+                        <SelectTrigger className="h-8 w-auto min-w-[148px] rounded-full text-xs bg-background border-border/50 shadow-sm px-3">
                             <SelectValue placeholder={t('filter_tag')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -555,14 +568,14 @@ export default function ContactsPage() {
                     </Select>
 
                     {selectedIds.size > 0 && (
-                        <div className="ml-auto text-sm text-muted-foreground flex items-center gap-2">
-                            <span className="bg-primary/10 text-primary px-2 py-1 rounded-md font-medium">
+                        <div className="ml-auto flex items-center gap-2">
+                            <span className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-semibold">
                                 {selectedIds.size} {t('selected_count')}
                             </span>
-                            <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteOpen(true)} className="h-7 px-2">
+                            <Button variant="destructive" size="sm" onClick={() => setIsBulkDeleteOpen(true)} className="h-7 px-3 rounded-full text-xs">
                                 <Trash2 className="h-3 w-3 mr-1" /> {t('delete_btn')}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="h-7 px-2">
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="h-7 px-3 rounded-full text-xs text-muted-foreground">
                                 <X className="h-3 w-3 mr-1" /> {t('clear_selection')}
                             </Button>
                         </div>
@@ -570,11 +583,14 @@ export default function ContactsPage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-background rounded-xl border border-border shadow-sm overflow-hidden flex flex-col relative">
+            {/* ── TABLE ───────────────────────────────────── */}
+            <div className="flex-1 bg-background rounded-2xl border border-border/40 shadow-sm overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-auto">
-                    <div className="min-w-max"> 
-                        <div className="flex border-b bg-muted/60 sticky top-0 z-20">
-                            <div className="w-[50px] shrink-0 border-r flex items-center justify-center px-4 py-3 bg-muted/60">
+                    <div className="min-w-max">
+
+                        {/* Header */}
+                        <div className="flex border-b border-border/40 bg-muted/30 sticky top-0 z-20">
+                            <div className="w-[50px] shrink-0 border-r border-border/30 flex items-center justify-center px-4 py-3">
                                 <Checkbox
                                     checked={filteredContacts.length > 0 && filteredContacts.every(c => selectedIds.has(c.id))}
                                     onCheckedChange={handleSelectAll}
@@ -584,93 +600,108 @@ export default function ContactsPage() {
                                 <div
                                     key={col.id}
                                     style={{ width: col.width, minWidth: col.width }}
-                                    className="relative px-4 py-3 text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-widest flex items-center shrink-0 border-r last:border-r-0 bg-muted/60 select-none"
+                                    className="relative px-4 py-3 text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.1em] flex items-center shrink-0 border-r border-border/30 last:border-r-0 select-none"
                                 >
                                     <span className="truncate">{col.label}</span>
                                     <div
-                                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/40 transition-colors rounded"
+                                        className="absolute right-0 top-1/4 bottom-1/4 w-0.5 cursor-col-resize hover:bg-primary/50 transition-colors rounded-full"
                                         onMouseDown={(e) => handleMouseDown(e, col.id)}
                                     />
                                 </div>
                             ))}
-                            <div className="w-[60px] shrink-0 border-l bg-muted/60 px-4 py-3 flex justify-center sticky right-0 z-30 ml-auto shadow-[-5px_0px_10px_rgba(0,0,0,0.02)]"></div>
+                            <div className="w-[60px] shrink-0 border-l border-border/30 sticky right-0 z-30 ml-auto bg-muted/30" />
                         </div>
 
-                        <div className="">
+                        {/* Rows */}
+                        <div>
                             {loadingContacts || loadingFields ? (
-                                <div className="flex flex-col justify-center items-center h-40 w-full gap-3">
-                                    <Loader2 className="h-7 w-7 animate-spin text-primary/50" />
-                                    <p className="text-sm text-muted-foreground">Carregando contatos...</p>
+                                <div className="flex flex-col justify-center items-center h-48 gap-3">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
+                                    <p className="text-sm text-muted-foreground/60">Carregando contatos...</p>
                                 </div>
                             ) : filteredContacts.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground w-full gap-3">
-                                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                                        <UserIcon className="h-8 w-8 opacity-30" />
+                                <div className="flex flex-col items-center justify-center h-72 gap-4">
+                                    <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center">
+                                        <UserIcon className="h-7 w-7 text-muted-foreground/30" />
                                     </div>
-                                    <div className="text-center">
-                                        <p className="font-medium text-foreground/70">{t('no_contacts_found')}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Tente ajustar os filtros ou a busca</p>
+                                    <div className="text-center space-y-1">
+                                        <p className="font-semibold text-sm text-foreground/60">{t('no_contacts_found')}</p>
+                                        <p className="text-xs text-muted-foreground/50">Tente ajustar os filtros ou a busca</p>
                                     </div>
                                 </div>
                             ) : (
                                 filteredContacts.map(contact => (
-                                    <div key={contact.id} className="flex border-b last:border-0 hover:bg-muted/50 transition-colors items-center h-[72px]">
-                                        <div className="w-[50px] shrink-0 border-r flex items-center justify-center h-full">
-                                            <Checkbox 
+                                    <div key={contact.id} className="flex border-b border-border/30 last:border-0 hover:bg-primary/[0.025] transition-colors items-center h-[68px] group">
+                                        <div className="w-[50px] shrink-0 border-r border-border/30 flex items-center justify-center h-full">
+                                            <Checkbox
                                                 checked={selectedIds.has(contact.id)}
                                                 onCheckedChange={() => toggleSelection(contact.id)}
                                             />
                                         </div>
                                         {columns.filter(c => c.visible).map(col => (
-                                            <div 
-                                                key={col.id} 
+                                            <div
+                                                key={col.id}
                                                 style={{ width: col.width, minWidth: col.width }}
-                                                className="px-4 shrink-0 overflow-hidden flex items-center border-r last:border-r-0 h-full"
+                                                className="px-4 shrink-0 overflow-hidden flex items-center border-r border-border/30 last:border-r-0 h-full"
                                             >
                                                 {col.id === 'contact' && (
-                                                    <div className="flex items-center gap-3 overflow-hidden w-full">
-                                                        <Avatar className="h-9 w-9 border border-border/50 shrink-0">
+                                                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                                                        <Avatar className="h-9 w-9 shrink-0 ring-2 ring-background shadow-sm">
                                                             <AvatarImage src={contact.profilePicUrl} />
-                                                            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{contact.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                            <AvatarFallback
+                                                                className="text-sm font-bold"
+                                                                style={{
+                                                                    backgroundColor: `${getAvatarColor(contact.name)}20`,
+                                                                    color: getAvatarColor(contact.name),
+                                                                }}
+                                                            >
+                                                                {contact.name.substring(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
                                                         </Avatar>
                                                         <div className="overflow-hidden">
-                                                            <p className="font-medium text-foreground truncate text-sm">{contact.name}</p>
-                                                            <div className="flex items-center text-xs text-muted-foreground truncate mt-0.5">
-                                                                <Phone className="h-3 w-3 mr-1 shrink-0" />
+                                                            <p className="font-semibold text-sm text-foreground truncate leading-tight">{contact.name}</p>
+                                                            <p className="text-xs text-muted-foreground/60 truncate mt-0.5 flex items-center gap-1">
+                                                                <Phone className="h-2.5 w-2.5 shrink-0" />
                                                                 {contact.phone || '—'}
-                                                            </div>
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 )}
                                                 {col.id === 'stage' && (
                                                     contact.funnelStage ? (
-                                                        <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800 font-medium truncate gap-1">
-                                                            {contact.funnelStage.emoji && <span>{contact.funnelStage.emoji}</span>}
-                                                            {contact.funnelStage.name}
-                                                        </Badge>
-                                                    ) : <span className="text-xs text-muted-foreground/60 italic">{t('no_stage')}</span>
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 border border-violet-200/60 dark:border-violet-700/40 truncate max-w-full">
+                                                            {contact.funnelStage.emoji && <span className="shrink-0">{contact.funnelStage.emoji}</span>}
+                                                            <span className="truncate">{contact.funnelStage.name}</span>
+                                                        </span>
+                                                    ) : <span className="text-xs text-muted-foreground/40 italic">{t('no_stage')}</span>
                                                 )}
                                                 {col.id === 'agent' && (
                                                     contact.assignedUser ? (
                                                         <div className="flex items-center gap-2 overflow-hidden">
                                                             <Avatar className="h-6 w-6 shrink-0">
-                                                                <AvatarFallback className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                                                                <AvatarFallback
+                                                                    className="text-[10px] font-bold"
+                                                                    style={{
+                                                                        backgroundColor: `${getAvatarColor(contact.assignedUser.name)}20`,
+                                                                        color: getAvatarColor(contact.assignedUser.name),
+                                                                    }}
+                                                                >
                                                                     {contact.assignedUser.name.substring(0, 2).toUpperCase()}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             <span className="text-sm text-foreground truncate">{contact.assignedUser.name}</span>
                                                         </div>
-                                                    ) : <span className="text-xs text-muted-foreground/60 italic">{t('unassigned')}</span>
+                                                    ) : <span className="text-xs text-muted-foreground/40 italic">{t('unassigned')}</span>
                                                 )}
                                                 {col.id === 'tags' && (
-                                                    <div className="flex gap-1 overflow-hidden flex-nowrap">
+                                                    <div className="flex gap-1.5 overflow-hidden flex-nowrap">
                                                         {contact.tags.slice(0, 3).map(tag => (
                                                             <span
                                                                 key={tag.id}
-                                                                className="inline-flex items-center text-[10px] px-2 h-5 rounded-full font-medium shrink-0 border"
+                                                                className="inline-flex items-center text-[10px] px-2.5 h-5 rounded-full font-semibold shrink-0 border"
                                                                 style={{
-                                                                    backgroundColor: tag.color ? `${tag.color}18` : undefined,
-                                                                    borderColor: tag.color ? `${tag.color}40` : undefined,
+                                                                    backgroundColor: tag.color ? `${tag.color}15` : undefined,
+                                                                    borderColor: tag.color ? `${tag.color}35` : undefined,
                                                                     color: tag.color || undefined,
                                                                 }}
                                                             >
@@ -678,7 +709,7 @@ export default function ContactsPage() {
                                                             </span>
                                                         ))}
                                                         {contact.tags.length > 3 && (
-                                                            <span className="inline-flex items-center text-[10px] px-2 h-5 rounded-full font-medium shrink-0 border bg-muted text-muted-foreground">+{contact.tags.length - 3}</span>
+                                                            <span className="inline-flex items-center text-[10px] px-2 h-5 rounded-full font-semibold shrink-0 bg-muted text-muted-foreground">+{contact.tags.length - 3}</span>
                                                         )}
                                                     </div>
                                                 )}
@@ -692,10 +723,10 @@ export default function ContactsPage() {
                                                 )}
                                             </div>
                                         ))}
-                                        <div className="w-[60px] shrink-0 px-4 flex justify-center sticky right-0 h-full items-center bg-background/95 backdrop-blur-sm border-l ml-auto z-10 shadow-[-5px_0px_10px_rgba(0,0,0,0.02)]">
+                                        <div className="w-[60px] shrink-0 px-4 flex justify-center sticky right-0 h-full items-center bg-background/95 backdrop-blur-sm border-l border-border/30 ml-auto z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted">
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
