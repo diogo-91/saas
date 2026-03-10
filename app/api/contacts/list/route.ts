@@ -34,9 +34,9 @@ export async function GET() {
 
     const formatted = teamContacts.map(c => ({
         ...c,
-        tags: c.contactTags.map(ct => ct.tag),
+        tags: c.contactTags.map(ct => ct.tag).filter(Boolean),
         profilePicUrl: c.chat?.profilePicUrl,
-        phone: c.chat?.remoteJid.split('@')[0]
+        phone: c.chat?.remoteJid?.split('@')[0]
     }));
 
     return NextResponse.json(formatted);
