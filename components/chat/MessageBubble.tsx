@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Message } from './types';
 import { formatTime } from './utils';
-import { Check, CheckCheck, Clock, Image as ImageIcon, FileText, Mic, Reply, Video } from 'lucide-react';
+import { Check, CheckCheck, Clock, Image as ImageIcon, FileText, Mic, Reply, Video, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomAudioPlayer } from '@/components/ui/custom-audio-player';
 
@@ -43,10 +43,10 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
   const [showActions, setShowActions] = useState(false);
   const isFromMe = msg.fromMe;
 
-  const bubbleClass = isFromMe
-    ? 'bg-primary text-primary-foreground ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-sm'
-    : msg.isInternal
-      ? 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-foreground rounded-tr-2xl rounded-br-2xl rounded-tl-sm'
+  const bubbleClass = msg.isInternal
+    ? 'bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100 rounded-2xl'
+    : isFromMe
+      ? 'bg-primary text-primary-foreground ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-sm'
       : 'bg-background border text-foreground rounded-tr-2xl rounded-br-2xl rounded-tl-sm';
 
   const renderQuotedMessage = () => {
@@ -170,7 +170,9 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
             <p className="text-[10px] font-medium opacity-60 mb-1 uppercase tracking-wide">Automação</p>
           )}
           {msg.isInternal && (
-            <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mb-1 uppercase tracking-wide">Nota Interna</p>
+            <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-1.5 uppercase tracking-widest flex items-center gap-1">
+              <Lock className="h-2.5 w-2.5" /> Nota Interna
+            </p>
           )}
           {renderQuotedMessage()}
           {renderContent()}
