@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Message } from './types';
 import { formatTime } from './utils';
-import { Check, CheckCheck, Clock, Image as ImageIcon, FileText, Mic, Reply, Video, Lock } from 'lucide-react';
+import { Check, CheckCheck, Clock, Image as ImageIcon, FileText, Mic, Reply, Video, Lock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomAudioPlayer } from '@/components/ui/custom-audio-player';
 
@@ -11,6 +11,7 @@ interface MessageBubbleProps {
   msg: Message;
   onMediaClick: (id: string) => void;
   onReply: (msg: Message) => void;
+  onDeleteMessage?: (msgId: string) => void;
   searchQuery: string;
 }
 
@@ -39,7 +40,7 @@ function StatusIcon({ status }: { status: string | null }) {
   return <Clock className="h-3 w-3 text-muted-foreground" />;
 }
 
-export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: MessageBubbleProps) {
+export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, searchQuery }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false);
   const isFromMe = msg.fromMe;
 
@@ -183,15 +184,26 @@ export function MessageBubble({ msg, onMediaClick, onReply, searchQuery }: Messa
         </div>
 
         {isFromMe && (
-          <div className={`transition-opacity ${showActions ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`flex flex-col gap-0.5 transition-opacity ${showActions ? 'opacity-100' : 'opacity-0'}`}>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 rounded-full mb-1"
+              className="h-6 w-6 rounded-full"
               onClick={() => onReply(msg)}
             >
               <Reply className="h-3 w-3" />
             </Button>
+            {onDeleteMessage && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDeleteMessage(msg.id)}
+                title="Apagar mensagem"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         )}
       </div>

@@ -451,20 +451,20 @@ export default function ChatPage() {
     }
   };
 
-  const handleDeleteChat = async () => {
-    if (!currentChat?.id) return;
+  const handleDeleteMessage = async (msgId: string) => {
+    // Optimistic removal
+    mutateMessages((current = []) => current.filter(m => m.id !== msgId), false);
     try {
-      const res = await fetch('/api/chats/delete', {
+      const res = await fetch('/api/messages/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatIds: [currentChat.id] }),
+        body: JSON.stringify({ messageId: msgId }),
       });
-      if (!res.ok) throw new Error('Falha ao excluir conversa');
-      toast.success('Conversa excluída');
-      globalMutate('/api/chats');
-      router.push('/dashboard');
+      if (!res.ok) throw new Error('Falha ao apagar mensagem');
+      toast.success('Mensagem apagada');
     } catch (e: any) {
-      toast.error(e.message || 'Erro ao excluir conversa');
+      mutateMessages(); // revert on error
+      toast.error(e.message || 'Erro ao apagar mensagem');
     }
   };
 
@@ -586,6 +586,7 @@ export default function ChatPage() {
             msg={msg}
             onMediaClick={handleMediaClick}
             onReply={setQuotedMessage}
+            onDeleteMessage={handleDeleteMessage}
             searchQuery={searchQuery}
           />
         </React.Fragment>
@@ -605,7 +606,6 @@ export default function ChatPage() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onCloseChat={currentChat ? handleCloseChat : undefined}
-          onDeleteChat={currentChat ? handleDeleteChat : undefined}
           onMarkUnread={currentChat ? handleMarkUnread : undefined}
           onDownloadChat={messages && messages.length > 0 ? handleDownloadChat : undefined}
         />

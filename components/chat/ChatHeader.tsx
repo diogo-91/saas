@@ -4,24 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, X, MoreVertical, CheckCheck, Trash2, XCircle, Download } from 'lucide-react';
+import { Search, X, MoreVertical, CheckCheck, XCircle, Download } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { ChatDetails } from './types';
 
 interface ChatHeaderProps {
@@ -32,7 +21,6 @@ interface ChatHeaderProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onCloseChat?: () => Promise<void>;
-  onDeleteChat?: () => Promise<void>;
   onMarkUnread?: () => void;
   onDownloadChat?: () => void;
 }
@@ -45,11 +33,9 @@ export function ChatHeader({
   searchQuery,
   setSearchQuery,
   onCloseChat,
-  onDeleteChat,
   onMarkUnread,
   onDownloadChat,
 }: ChatHeaderProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const initials = chatDetails.name
@@ -66,17 +52,6 @@ export function ChatHeader({
       await onCloseChat();
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleDeleteChat = async () => {
-    if (!onDeleteChat) return;
-    setIsLoading(true);
-    try {
-      await onDeleteChat();
-    } finally {
-      setIsLoading(false);
-      setDeleteDialogOpen(false);
     }
   };
 
@@ -169,18 +144,6 @@ export function ChatHeader({
                       Finalizar conversa
                     </DropdownMenuItem>
                   )}
-                  {onDeleteChat && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => setDeleteDialogOpen(true)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir conversa
-                      </DropdownMenuItem>
-                    </>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -188,25 +151,6 @@ export function ChatHeader({
         )}
       </header>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso excluirá permanentemente todas as mensagens com {chatDetails.name}. Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteChat}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
