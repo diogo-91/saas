@@ -8,6 +8,8 @@ import useSWR, { useSWRConfig } from 'swr';
 import PusherClient from 'pusher-js';
 import { toast } from 'sonner';
 import { EmojiClickData } from 'emoji-picker-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import Video from "yet-another-react-lightbox/plugins/video";
@@ -484,7 +486,7 @@ export default function ChatPage() {
     }
 
     const contactName = chatDetails.name;
-    const contactJid = chatDetails.remoteJid;
+    const contactJid = chatDetails.remoteJid ?? '';
     const exportDate = new Date().toLocaleString('pt-BR');
     const agentName = user?.name || user?.email || 'Atendente';
 
@@ -497,62 +499,61 @@ export default function ChatPage() {
       return;
     }
 
-    const rows = filteredMsgs.map(msg => {
-      const time = new Date(msg.timestamp).toLocaleString('pt-BR');
-      const sender = msg.fromMe ? agentName : contactName;
-      const content = msg.text || (msg.mediaUrl ? `[Mídia: ${msg.messageType}]` : '[Mensagem não suportada]');
-      const type = msg.isInternal ? 'Nota Interna' : (msg.fromMe ? 'Enviada' : 'Recebida');
-      const rowColor = msg.isInternal ? '#FEF3C7' : (msg.fromMe ? '#EEF2FF' : '#FFFFFF');
-      return `<tr style="background:${rowColor}">
-        <td>${time}</td>
-        <td>${sender}</td>
-        <td><span style="font-size:11px;font-weight:600;color:${msg.isInternal ? '#D97706' : msg.fromMe ? '#4F46E5' : '#6B7280'}">${type}</span></td>
-        <td>${content}</td>
-      </tr>`;
-    }).join('');
-
     const title = includeInternalNotes
       ? 'Relatório Completo (com Notas Internas)'
       : 'Relatório de Conversa';
 
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${title} - ${contactName}</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
-    h1 { font-size: 18px; margin-bottom: 4px; color: #1E1B4B; }
-    .meta { font-size: 12px; color: #6B7280; margin-bottom: 16px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    thead tr { background: #4F46E5; color: white; }
-    th { padding: 8px 10px; text-align: left; }
-    td { padding: 7px 10px; border-bottom: 1px solid #E5E7EB; vertical-align: top; word-break: break-word; }
-    td:first-child { white-space: nowrap; }
-  </style>
-</head>
-<body>
-  <h1>${title}</h1>
-  <p class="meta">Contato: <strong>${contactName}</strong> &nbsp;|&nbsp; ${contactJid}<br>Exportado em: ${exportDate}</p>
-  <table>
-    <thead><tr><th>Data/Hora</th><th>Remetente</th><th>Tipo</th><th>Mensagem</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-</body>
-</html>`;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    // ── Header ──────────────────────────────────────────────────────────
+    doc.setFontSize(16);
+    doc.setTextColor(30, 27, 75); // indigo-900
+    doc.text(title, 40, 40);
+
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128); // gray-500
+    doc.text(`Contato: ${contactName}   |   ${contactJid}`, 40, 58);
+    doc.text(`Exportado em: ${exportDate}`, 40, 70);
+
+    // ── Table ────────────────────────────────────────────────────────────
+    const tableRows = filteredMsgs.map(msg => {
+      const time = new Date(msg.timestamp).toLocaleString('pt-BR');
+      const sender = msg.fromMe ? agentName : contactName;
+      const type = msg.isInternal ? 'Nota Interna' : (msg.fromMe ? 'Enviada' : 'Recebida');
+      const content = msg.text || (msg.mediaUrl ? `[Mídia: ${msg.messageType}]` : '[Mensagem não suportada]');
+      return [time, sender, type, content];
+    });
+
+    autoTable(doc, {
+      startY: 85,
+      head: [['Data/Hora', 'Remetente', 'Tipo', 'Mensagem']],
+      body: tableRows,
+      styles: { fontSize: 8, cellPadding: 5, valign: 'top', overflow: 'linebreak' },
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, // indigo-600
+      columnStyles: {
+        0: { cellWidth: 110 },
+        1: { cellWidth: 120 },
+        2: { cellWidth: 80 },
+        3: { cellWidth: 'auto' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          const msg = filteredMsgs[data.row.index];
+          if (msg?.isInternal) {
+            data.cell.styles.fillColor = [254, 243, 199]; // amber-100
+            data.cell.styles.textColor = [146, 64, 14];  // amber-800
+          } else if (msg?.fromMe) {
+            data.cell.styles.fillColor = [238, 242, 255]; // indigo-50
+          }
+        }
+      },
+      margin: { left: 40, right: 40 },
+    });
+
     const safeName = contactName.replace(/[^a-z0-9]/gi, '_');
     const dateStr = new Date().toISOString().split('T')[0];
     const suffix = includeInternalNotes ? 'completo' : 'conversa';
-    a.href = url;
-    a.download = `${safeName}_${suffix}_${dateStr}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    doc.save(`${safeName}_${suffix}_${dateStr}.pdf`);
     toast.success('Download iniciado!');
   };
 
