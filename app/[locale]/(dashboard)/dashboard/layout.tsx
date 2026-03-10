@@ -284,7 +284,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (chat.contact?.funnelStage?.id !== detailedFilters.funnelStageId) return false;
       }
 
-      if (detailedFilters.agentId) {
+      if (detailedFilters.agentId === -1) {
+        if (chat.contact?.assignedUser) return false;
+      } else if (detailedFilters.agentId) {
         if (chat.contact?.assignedUser?.id !== detailedFilters.agentId) return false;
       }
 

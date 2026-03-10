@@ -44,7 +44,6 @@ export function ChatFilters({
   setFilters,
   instances,
 }: ChatFiltersProps) {
-  const { data: funnelStages } = useSWR('/api/funnel-stages', fetcher);
   const { data: tags } = useSWR('/api/tags', fetcher);
   const { data: teamMembers } = useSWR('/api/team/members', fetcher);
 
@@ -89,7 +88,10 @@ export function ChatFilters({
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Responsável</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setFilters({ ...filters, agentId: null })}>
-                  <span className={!filters.agentId ? 'text-primary font-medium' : ''}>Todos</span>
+                  <span className={filters.agentId === null ? 'text-primary font-medium' : ''}>Todos</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilters({ ...filters, agentId: -1 })}>
+                  <span className={filters.agentId === -1 ? 'text-primary font-medium' : ''}>Não atribuído</span>
                 </DropdownMenuItem>
                 {teamMembers.map((member: any) => (
                   <DropdownMenuItem
@@ -98,26 +100,6 @@ export function ChatFilters({
                   >
                     <span className={filters.agentId === member.id ? 'text-primary font-medium' : ''}>
                       {member.name || member.email}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </>
-            )}
-
-            {funnelStages?.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Etapa do Funil</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setFilters({ ...filters, funnelStageId: null })}>
-                  <span className={!filters.funnelStageId ? 'text-primary font-medium' : ''}>Todas etapas</span>
-                </DropdownMenuItem>
-                {funnelStages.map((stage: any) => (
-                  <DropdownMenuItem
-                    key={stage.id}
-                    onClick={() => setFilters({ ...filters, funnelStageId: stage.id })}
-                  >
-                    <span className={filters.funnelStageId === stage.id ? 'text-primary font-medium' : ''}>
-                      {stage.emoji} {stage.name}
                     </span>
                   </DropdownMenuItem>
                 ))}
