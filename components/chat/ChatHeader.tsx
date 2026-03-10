@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, X, MoreVertical, CheckCheck, XCircle, Download } from 'lucide-react';
+import { Search, X, MoreVertical, CheckCheck, XCircle, Download, FileText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +22,7 @@ interface ChatHeaderProps {
   setSearchQuery: (query: string) => void;
   onCloseChat?: () => Promise<void>;
   onMarkUnread?: () => void;
-  onDownloadChat?: () => void;
+  onDownloadChat?: (includeInternalNotes: boolean) => void;
 }
 
 export function ChatHeader({
@@ -108,18 +108,6 @@ export function ChatHeader({
                 <Search className="h-4 w-4" />
               </Button>
 
-              {onDownloadChat && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-muted-foreground"
-                  onClick={onDownloadChat}
-                  title="Exportar conversa"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              )}
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -131,7 +119,7 @@ export function ChatHeader({
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuContent align="end" className="w-60">
                   {onMarkUnread && (
                     <DropdownMenuItem onClick={onMarkUnread}>
                       <CheckCheck className="h-4 w-4 mr-2" />
@@ -143,6 +131,18 @@ export function ChatHeader({
                       <XCircle className="h-4 w-4 mr-2" />
                       Finalizar conversa
                     </DropdownMenuItem>
+                  )}
+                  {onDownloadChat && (
+                    <>
+                      <DropdownMenuItem onClick={() => onDownloadChat(false)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar conversa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDownloadChat(true)}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Baixar completo (com notas)
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

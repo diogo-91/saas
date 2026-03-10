@@ -477,7 +477,7 @@ export default function ChatPage() {
     toast.success('Marcada como não lida');
   };
 
-  const handleDownloadChat = () => {
+  const handleDownloadChat = (includeInternalNotes: boolean) => {
     if (!messages || messages.length === 0) {
       toast.error('Nenhuma mensagem para exportar');
       return;
@@ -485,11 +485,20 @@ export default function ChatPage() {
 
     const contactName = chatDetails.name;
     const contactJid = chatDetails.remoteJid;
-    const exportDate = new Date().toLocaleString();
+    const exportDate = new Date().toLocaleString('pt-BR');
     const agentName = user?.name || user?.email || 'Atendente';
 
-    const rows = messages.map(msg => {
-      const time = new Date(msg.timestamp).toLocaleString();
+    const filteredMsgs = includeInternalNotes
+      ? messages
+      : messages.filter(msg => !msg.isInternal);
+
+    if (filteredMsgs.length === 0) {
+      toast.error('Nenhuma mensagem para exportar');
+      return;
+    }
+
+    const rows = filteredMsgs.map(msg => {
+      const time = new Date(msg.timestamp).toLocaleString('pt-BR');
       const sender = msg.fromMe ? agentName : contactName;
       const content = msg.text || (msg.mediaUrl ? `[Mídia: ${msg.messageType}]` : '[Mensagem não suportada]');
       const type = msg.isInternal ? 'Nota Interna' : (msg.fromMe ? 'Enviada' : 'Recebida');
@@ -502,11 +511,15 @@ export default function ChatPage() {
       </tr>`;
     }).join('');
 
+    const title = includeInternalNotes
+      ? 'Relatório Completo (com Notas Internas)'
+      : 'Relatório de Conversa';
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Conversa - ${contactName}</title>
+  <title>${title} - ${contactName}</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
     h1 { font-size: 18px; margin-bottom: 4px; color: #1E1B4B; }
@@ -516,11 +529,10 @@ export default function ChatPage() {
     th { padding: 8px 10px; text-align: left; }
     td { padding: 7px 10px; border-bottom: 1px solid #E5E7EB; vertical-align: top; word-break: break-word; }
     td:first-child { white-space: nowrap; }
-    @media print { body { margin: 0; } }
   </style>
 </head>
 <body>
-  <h1>Relatório de Conversa</h1>
+  <h1>${title}</h1>
   <p class="meta">Contato: <strong>${contactName}</strong> &nbsp;|&nbsp; ${contactJid}<br>Exportado em: ${exportDate}</p>
   <table>
     <thead><tr><th>Data/Hora</th><th>Remetente</th><th>Tipo</th><th>Mensagem</th></tr></thead>
@@ -529,16 +541,19 @@ export default function ChatPage() {
 </body>
 </html>`;
 
-    const win = window.open('', '_blank');
-    if (!win) {
-      toast.error('Pop-up bloqueado pelo navegador. Libere pop-ups e tente novamente.');
-      return;
-    }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 500);
-    toast.success('Preparando PDF para download...');
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = contactName.replace(/[^a-z0-9]/gi, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const suffix = includeInternalNotes ? 'completo' : 'conversa';
+    a.href = url;
+    a.download = `${safeName}_${suffix}_${dateStr}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Download iniciado!');
   };
 
   const renderReplyPreview = () => {
