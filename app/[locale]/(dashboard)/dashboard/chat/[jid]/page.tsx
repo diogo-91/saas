@@ -447,7 +447,7 @@ export default function ChatPage() {
       if (!res.ok) throw new Error('Falha ao finalizar conversa');
       toast.success('Conversa finalizada');
       globalMutate('/api/chats');
-      mutateMessages();
+      router.push('/dashboard/chat');
     } catch (e: any) {
       toast.error(e.message || 'Erro ao finalizar conversa');
     }
@@ -470,13 +470,21 @@ export default function ChatPage() {
     }
   };
 
-  const handleMarkUnread = () => {
+  const handleMarkUnread = async () => {
     if (!currentChat?.id) return;
-    // Optimistic local update (visual indicator until next message arrives)
+    // Optimistic local update
     globalMutate('/api/chats', (currentData: Chat[] | undefined = []) =>
       currentData.map(chat => chat.id === currentChat.id ? { ...chat, unreadCount: 1 } : chat), false
     );
-    toast.success('Marcada como não lida');
+    try {
+      const res = await fetch(`/api/chats/${currentChat.id}/mark-unread`, { method: 'POST' });
+      if (!res.ok) throw new Error('Falha ao marcar como não lida');
+      toast.success('Marcada como não lida');
+    } catch (e: any) {
+      // Revert optimistic update on error
+      globalMutate('/api/chats');
+      toast.error(e.message || 'Erro ao marcar como não lida');
+    }
   };
 
   const handleDownloadChat = (includeInternalNotes: boolean) => {
