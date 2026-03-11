@@ -7,7 +7,7 @@ import { logActivity } from '@/lib/db/activity';
 import { createSystemMessage } from '@/lib/db/system-messages';
 
 export async function PUT(
-  request: NextRequest, 
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -19,11 +19,11 @@ export async function PUT(
 
     const { id } = await params;
     const { stageId } = await request.json();
-    
+
     const contactId = parseInt(id, 10);
     const newStageId = stageId ? parseInt(stageId, 10) : null;
 
-    let stageName = 'No Stage';
+    let stageName = 'Sem etapa';
 
     if (newStageId) {
       const stage = await db.query.funnelStages.findFirst({
@@ -39,7 +39,7 @@ export async function PUT(
     }
 
     const [updatedContact] = await db.update(contacts)
-      .set({ 
+      .set({
         funnelStageId: newStageId,
         updatedAt: new Date()
       })
@@ -52,12 +52,12 @@ export async function PUT(
     if (!updatedContact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
-    
+
     await logActivity(team.id, currentUser.id, ActivityType.CHANGE_FUNNEL_STAGE);
 
     if (updatedContact.chatId) {
-        const logText = `${currentUser.name || currentUser.email} moved to stage: ${stageName}`;
-        await createSystemMessage(team.id, updatedContact.chatId, logText);
+      const logText = `${currentUser.name || currentUser.email} moveu para etapa: ${stageName}`;
+      await createSystemMessage(team.id, updatedContact.chatId, logText);
     }
 
     return NextResponse.json(updatedContact);

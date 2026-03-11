@@ -14,15 +14,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     const chatId = parseInt(id);
 
-    
+
     await db.update(automationSessions)
       .set({ status: 'completed', updatedAt: new Date() })
       .where(and(eq(automationSessions.chatId, chatId), eq(automationSessions.status, 'active')));
 
-    
-    
-    
-    await createSystemMessage(team.id, chatId, `Chat closed by ${user.name || user.email}`);
+
+
+
+    await createSystemMessage(team.id, chatId, `Conversa finalizada por ${user.name || user.email}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

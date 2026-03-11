@@ -22,7 +22,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Invalid Contact ID' }, { status: 400 });
     }
 
-    let agentName = 'Unassigned';
+    let agentName = 'Não atribuído';
 
     if (agentId) {
       const agentMember = await db.query.teamMembers.findFirst({
@@ -34,13 +34,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       });
 
       if (!agentMember) {
-         return NextResponse.json({ error: 'Agent not found in team' }, { status: 403 });
+        return NextResponse.json({ error: 'Agent not found in team' }, { status: 403 });
       }
       agentName = agentMember.user.name || agentMember.user.email;
     }
-    
+
     const [updatedContact] = await db.update(contacts)
-      .set({ 
+      .set({
         assignedUserId: agentId ? parseInt(agentId, 10) : null,
         updatedAt: new Date()
       })
@@ -57,11 +57,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await logActivity(team.id, currentUser.id, ActivityType.ASSIGN_AGENT);
 
     if (updatedContact.chatId) {
-        const logText = agentId 
-            ? `${currentUser.name || currentUser.email} transferred to ${agentName}`
-            : `${currentUser.name || currentUser.email} unassigned the chat`;
-        
-        await createSystemMessage(team.id, updatedContact.chatId, logText);
+      const logText = agentId
+        ? `${currentUser.name || currentUser.email} transferiu para ${agentName}`
+        : `${currentUser.name || currentUser.email} removeu a atribuição do chat`;
+
+      await createSystemMessage(team.id, updatedContact.chatId, logText);
     }
 
     return NextResponse.json(updatedContact);

@@ -29,10 +29,10 @@ export const formatDateSeparator = (date: Date): string => {
   yesterday.setDate(today.getDate() - 1);
   const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-  if (msgDate.getTime() === today.getTime()) return 'Today';
-  if (msgDate.getTime() === yesterday.getTime()) return 'Yesterday';
+  if (msgDate.getTime() === today.getTime()) return 'Hoje';
+  if (msgDate.getTime() === yesterday.getTime()) return 'Ontem';
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -42,7 +42,7 @@ export const formatDateSeparator = (date: Date): string => {
 
 export const formatTime = (timestamp: string): string => {
   try {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
+    return new Date(timestamp).toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
