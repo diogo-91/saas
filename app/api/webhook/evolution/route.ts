@@ -413,8 +413,9 @@ export async function POST(request: Request) {
                              messagePayload.documentMessage || 
                              messagePayload.stickerMessage;
 
-        const rawBase64 = messagePayload.base64 || mediaContent?.base64;
-        const mediaUrl = mediaContent?.url; 
+        // Evolution API sends base64 at body.data.base64 (not inside message payload)
+        const rawBase64 = messageData.base64 || messagePayload.base64 || mediaContent?.base64;
+        const mediaUrl = mediaContent?.url;
 
         if ((rawBase64 || mediaUrl) && mediaContent) {
             try {
