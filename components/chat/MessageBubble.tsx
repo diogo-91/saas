@@ -238,7 +238,9 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── IMAGE ───────────────────────────────────────────────────────────────
     if (type === 'imageMessage') {
-      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      // Always use proxy URL — it serves the file via fs.readFile, which works
+      // even for runtime-created files that Next.js static serving may not expose.
+      const src = `/api/media?msgId=${msg.id}`;
       return (
         <div>
           <img
@@ -248,14 +250,8 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
             onClick={() => onMediaClick(msg.id)}
             onError={(e) => {
               const img = e.target as HTMLImageElement;
-              // Only retry with proxy if we haven't already tried it
-              if (!img.dataset.fallback && !img.src.includes('/api/media')) {
-                img.dataset.fallback = '1';
-                img.src = `/api/media?msgId=${msg.id}`;
-              } else {
-                img.style.display = 'none';
-                img.insertAdjacentHTML('afterend', '<span class="text-xs opacity-50 italic flex items-center gap-1">📷 Imagem indisponível</span>');
-              }
+              img.style.display = 'none';
+              img.insertAdjacentHTML('afterend', '<span class="text-xs opacity-50 italic flex items-center gap-1">📷 Imagem indisponível</span>');
             }}
           />
           {msg.mediaCaption && (
@@ -269,7 +265,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── STICKER ─────────────────────────────────────────────────────────────
     if (type === 'stickerMessage') {
-      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      const src = `/api/media?msgId=${msg.id}`;
       return (
         <img
           src={src}
@@ -278,10 +274,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
           style={{ background: 'transparent' }}
           onError={(e) => {
             const img = e.target as HTMLImageElement;
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = '1';
-              img.src = `/api/media?msgId=${msg.id}`;
-            }
+            img.style.opacity = '0.3';
           }}
         />
       );
@@ -289,7 +282,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── VIDEO ────────────────────────────────────────────────────────────────
     if (type === 'videoMessage') {
-      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      const src = `/api/media?msgId=${msg.id}`;
       return (
         <div>
           <div
@@ -317,7 +310,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── AUDIO / PTT ─────────────────────────────────────────────────────────
     if (type === 'audioMessage') {
-      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      const src = `/api/media?msgId=${msg.id}`;
       return (
         <div className="min-w-[220px]">
           <CustomAudioPlayer src={src} isMe={isFromMe} />
@@ -331,7 +324,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
       const size = formatFileSize(msg.mediaFileLength);
       return (
         <a
-          href={msg.mediaUrl || `/api/media?msgId=${msg.id}`}
+          href={`/api/media?msgId=${msg.id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-[180px]"
@@ -442,7 +435,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── VIEW ONCE ───────────────────────────────────────────────────────────
     if (type === 'viewOnceMessage' || type === 'viewOnceMessageV2') {
-      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      const src = `/api/media?msgId=${msg.id}`;
       const isImage = msg.mediaMimetype?.startsWith('image/') ?? true;
       const isVideo = msg.mediaMimetype?.startsWith('video/');
       if (isVideo) {

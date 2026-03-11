@@ -43,14 +43,22 @@ export async function GET(request: NextRequest) {
 
     if (!msg) return NextResponse.json({ error: 'Message not found' }, { status: 404 });
 
-    // If local file already exists, serve it directly
+    // If local file already exists, serve it directly via readFile (NOT redirect).
+    // Redirecting to /uploads/... relies on Next.js static file serving, which may not
+    // immediately expose runtime-created files. Reading via fs.readFile is always reliable.
     if (msg.mediaUrl && msg.mediaUrl.startsWith('/uploads/')) {
       const localPath = path.join(process.cwd(), 'public', msg.mediaUrl);
       try {
-        await fs.access(localPath);
-        return NextResponse.redirect(new URL(msg.mediaUrl, request.url));
+        const fileBuffer = await fs.readFile(localPath);
+        const mimetype = msg.mediaMimetype || 'application/octet-stream';
+        return new NextResponse(fileBuffer, {
+          headers: {
+            'Content-Type': mimetype,
+            'Cache-Control': 'public, max-age=86400',
+          },
+        });
       } catch {
-        // File missing locally — fall through to re-fetch
+        // File missing locally — fall through to re-fetch via Evolution API
       }
     }
 
