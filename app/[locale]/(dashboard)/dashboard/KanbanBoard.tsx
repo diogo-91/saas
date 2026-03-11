@@ -91,7 +91,12 @@ export default function KanbanBoard() {
             const newCols: Record<string, ChatCard[]> = {};
             stages.forEach(s => newCols[s.id] = []);
 
+            // First stage (order=1) is the fallback for contacts without a stage
+            const firstStageId = stages[0]?.id;
+
             chats.forEach(chat => {
+                if (!chat.contact) return;
+
                 const card: ChatCard = {
                     id: chat.id,
                     remoteJid: chat.remoteJid,
@@ -106,11 +111,13 @@ export default function KanbanBoard() {
                     instanceId: chat.instanceId
                 };
 
-                if (chat.contact?.funnelStage) {
-                    const stageId = chat.contact.funnelStage.id;
-                    if (newCols[stageId]) newCols[stageId].push(card);
+                if (chat.contact.funnelStage && newCols[chat.contact.funnelStage.id]) {
+                    // Contact has a stage — place it there
+                    newCols[chat.contact.funnelStage.id].push(card);
+                } else if (firstStageId) {
+                    // No stage yet — show in first column (Novo)
+                    newCols[firstStageId].push(card);
                 }
-                // Contacts without a stage are not shown (auto-assigned to Novo on first message)
             });
             setColumns(newCols);
         }

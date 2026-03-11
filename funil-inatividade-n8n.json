@@ -1,0 +1,205 @@
+{
+  "name": "Funil - Verificação de Inatividade (5h)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "A cada 30 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://saas-saas.vrabqs.easypanel.host/api/cron/funnel-check",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 9a2744aeebb99393ab05c6874d47af6a3aaf6fad05909f13519e8124b17e2404"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Verificar Inatividade",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-moved",
+              "leftValue": "={{ $json.movedToNotScheduled }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Houve movimentações?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-1",
+              "name": "status",
+              "value": "✅ MOVIMENTADO",
+              "type": "string"
+            },
+            {
+              "id": "assign-2",
+              "name": "quantidade",
+              "value": "={{ $('Verificar Inatividade').item.json.movedToNotScheduled }}",
+              "type": "number"
+            },
+            {
+              "id": "assign-3",
+              "name": "mensagem",
+              "value": "={{ $('Verificar Inatividade').item.json.movedToNotScheduled }} contato(s) movido(s) para 'Não Agendado' por inatividade de 5h",
+              "type": "string"
+            },
+            {
+              "id": "assign-4",
+              "name": "executadoEm",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Log - Contatos Movidos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 180]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-5",
+              "name": "status",
+              "value": "⏭️ SEM MOVIMENTAÇÃO",
+              "type": "string"
+            },
+            {
+              "id": "assign-6",
+              "name": "mensagem",
+              "value": "Nenhum contato inativo encontrado nesta execução",
+              "type": "string"
+            },
+            {
+              "id": "assign-7",
+              "name": "executadoEm",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Log - Sem Movimentação",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 420]
+    }
+  ],
+  "connections": {
+    "A cada 30 minutos": {
+      "main": [
+        [
+          {
+            "node": "Verificar Inatividade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Inatividade": {
+      "main": [
+        [
+          {
+            "node": "Houve movimentações?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Houve movimentações?": {
+      "main": [
+        [
+          {
+            "node": "Log - Contatos Movidos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log - Sem Movimentação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "funil",
+      "createdAt": "2026-03-08T00:00:00.000Z",
+      "updatedAt": "2026-03-08T00:00:00.000Z"
+    }
+  ]
+}

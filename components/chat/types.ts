@@ -13,9 +13,11 @@ export interface Message {
   mediaSeconds?: number | null;
   mediaIsPtt?: boolean | null;
   contactName?: string | null;
+  contactVcard?: string | null;
   locationLatitude?: string | null;
   locationLongitude?: string | null;
   locationName?: string | null;
+  locationAddress?: string | null;
   status: string | null;
   isAi: boolean | null;
   isAutomation: boolean | null;
