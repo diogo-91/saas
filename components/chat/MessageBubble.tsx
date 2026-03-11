@@ -238,60 +238,64 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── IMAGE ───────────────────────────────────────────────────────────────
     if (type === 'imageMessage') {
-      if (msg.mediaUrl) {
-        return (
-          <div>
-            <img
-              src={msg.mediaUrl}
-              alt="Imagem"
-              className="rounded-lg max-w-[240px] cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => onMediaClick(msg.id)}
-            />
-            {msg.mediaCaption && (
-              <p className="text-sm mt-1">
-                <FormattedText text={msg.mediaCaption} query={searchQuery} />
-              </p>
-            )}
-          </div>
-        );
-      }
+      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
       return (
-        <div className="flex items-center gap-2 opacity-60">
-          <ImageIcon className="h-5 w-5 shrink-0" />
-          <span className="text-sm italic">Imagem indisponível</span>
+        <div>
+          <img
+            src={src}
+            alt="Imagem"
+            className="rounded-lg max-w-[240px] cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => onMediaClick(msg.id)}
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              if (!img.dataset.fallback) {
+                img.dataset.fallback = '1';
+                img.src = `/api/media?msgId=${msg.id}`;
+              } else {
+                img.style.display = 'none';
+                img.insertAdjacentHTML('afterend', '<span class="text-xs opacity-50 italic flex items-center gap-1">📷 Imagem indisponível</span>');
+              }
+            }}
+          />
+          {msg.mediaCaption && (
+            <p className="text-sm mt-1">
+              <FormattedText text={msg.mediaCaption} query={searchQuery} />
+            </p>
+          )}
         </div>
       );
     }
 
     // ─── STICKER ─────────────────────────────────────────────────────────────
     if (type === 'stickerMessage') {
-      if (msg.mediaUrl) {
-        return (
-          <img
-            src={msg.mediaUrl}
-            alt="Figurinha"
-            className="max-w-[160px] max-h-[160px] object-contain"
-            style={{ background: 'transparent' }}
-          />
-        );
-      }
+      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
       return (
-        <div className="flex items-center gap-2 opacity-60">
-          <span className="text-2xl">🎭</span>
-          <span className="text-sm italic">Figurinha</span>
-        </div>
+        <img
+          src={src}
+          alt="Figurinha"
+          className="max-w-[160px] max-h-[160px] object-contain"
+          style={{ background: 'transparent' }}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = '1';
+              img.src = `/api/media?msgId=${msg.id}`;
+            }
+          }}
+        />
       );
     }
 
     // ─── VIDEO ────────────────────────────────────────────────────────────────
     if (type === 'videoMessage') {
-      if (msg.mediaUrl) {
-        return (
+      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      return (
+        <div>
           <div
             className="relative cursor-pointer rounded-lg overflow-hidden max-w-[240px]"
             onClick={() => onMediaClick(msg.id)}
           >
-            <video src={msg.mediaUrl} className="w-full rounded-lg" />
+            <video src={src} className="w-full rounded-lg" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
               <Video className="h-10 w-10 text-white" />
             </div>
@@ -300,36 +304,22 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
                 {formatDuration(msg.mediaSeconds)}
               </span>
             )}
-            {msg.mediaCaption && (
-              <p className="text-sm mt-1 px-1">
-                <FormattedText text={msg.mediaCaption} query={searchQuery} />
-              </p>
-            )}
           </div>
-        );
-      }
-      return (
-        <div className="flex items-center gap-2 opacity-60">
-          <Video className="h-5 w-5 shrink-0" />
-          <span className="text-sm italic">Vídeo indisponível</span>
+          {msg.mediaCaption && (
+            <p className="text-sm mt-1 px-1">
+              <FormattedText text={msg.mediaCaption} query={searchQuery} />
+            </p>
+          )}
         </div>
       );
     }
 
     // ─── AUDIO / PTT ─────────────────────────────────────────────────────────
     if (type === 'audioMessage') {
+      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
       return (
         <div className="min-w-[220px]">
-          {msg.mediaUrl ? (
-            <CustomAudioPlayer src={msg.mediaUrl} isMe={isFromMe} />
-          ) : (
-            <div className="flex items-center gap-2">
-              <Mic className="h-4 w-4 shrink-0" />
-              <span className="text-xs opacity-70">
-                {msg.mediaIsPtt ? 'Mensagem de voz' : 'Áudio'}{msg.mediaSeconds ? ` · ${formatDuration(msg.mediaSeconds)}` : ''}
-              </span>
-            </div>
-          )}
+          <CustomAudioPlayer src={src} isMe={isFromMe} />
         </div>
       );
     }
@@ -340,7 +330,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
       const size = formatFileSize(msg.mediaFileLength);
       return (
         <a
-          href={msg.mediaUrl || '#'}
+          href={msg.mediaUrl || `/api/media?msgId=${msg.id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-[180px]"
@@ -451,43 +441,34 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
 
     // ─── VIEW ONCE ───────────────────────────────────────────────────────────
     if (type === 'viewOnceMessage' || type === 'viewOnceMessageV2') {
-      if (msg.mediaUrl) {
-        const isImage = msg.mediaMimetype?.startsWith('image/');
-        const isVideo = msg.mediaMimetype?.startsWith('video/');
-        if (isImage) {
-          return (
-            <div>
-              <img
-                src={msg.mediaUrl}
-                alt="Visualização única"
-                className="rounded-lg max-w-[240px] cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => onMediaClick(msg.id)}
-              />
-              <p className="text-xs opacity-60 mt-1 flex items-center gap-1">
-                <Eye className="h-3 w-3" /> Visualização única
-              </p>
+      const src = msg.mediaUrl || `/api/media?msgId=${msg.id}`;
+      const isImage = msg.mediaMimetype?.startsWith('image/') ?? true;
+      const isVideo = msg.mediaMimetype?.startsWith('video/');
+      if (isVideo) {
+        return (
+          <div
+            className="relative cursor-pointer rounded-lg overflow-hidden max-w-[240px]"
+            onClick={() => onMediaClick(msg.id)}
+          >
+            <video src={src} className="w-full rounded-lg" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 gap-1">
+              <Eye className="h-8 w-8 text-white" />
+              <span className="text-xs text-white">Visualização única</span>
             </div>
-          );
-        }
-        if (isVideo) {
-          return (
-            <div
-              className="relative cursor-pointer rounded-lg overflow-hidden max-w-[240px]"
-              onClick={() => onMediaClick(msg.id)}
-            >
-              <video src={msg.mediaUrl} className="w-full rounded-lg" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 gap-1">
-                <Eye className="h-8 w-8 text-white" />
-                <span className="text-xs text-white">Visualização única</span>
-              </div>
-            </div>
-          );
-        }
+          </div>
+        );
       }
       return (
-        <div className={`flex items-center gap-2 px-1 py-0.5 rounded-lg ${isFromMe ? 'bg-primary-foreground/10' : 'bg-muted'}`}>
-          <Eye className="h-5 w-5 shrink-0 opacity-60" />
-          <span className="text-sm opacity-70">Foto/Vídeo de visualização única</span>
+        <div>
+          <img
+            src={src}
+            alt="Visualização única"
+            className="rounded-lg max-w-[240px] cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => onMediaClick(msg.id)}
+          />
+          <p className="text-xs opacity-60 mt-1 flex items-center gap-1">
+            <Eye className="h-3 w-3" /> Visualização única
+          </p>
         </div>
       );
     }

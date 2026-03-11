@@ -292,11 +292,13 @@ export async function POST(request: Request) {
 
     const instance = await db.query.evolutionInstances.findFirst({
         where: eq(evolutionInstances.instanceName, instanceName),
-        columns: { 
-            id: true, 
-            teamId: true, 
-            metaToken: true 
-        } 
+        columns: {
+            id: true,
+            teamId: true,
+            metaToken: true,
+            accessToken: true,
+            integration: true,
+        }
     });
 
     if (!instance || !instance.teamId) {
@@ -427,8 +429,11 @@ export async function POST(request: Request) {
                         'User-Agent': 'Evolution-Client/1.0'
                     };
 
-                    if (metaToken) {
+                    // Meta Cloud API uses Bearer token; Baileys uses Evolution API key
+                    if (instance.integration === 'WHATSAPP-BUSINESS' && metaToken) {
                         headers['Authorization'] = `Bearer ${metaToken}`;
+                    } else if (instance.accessToken) {
+                        headers['apikey'] = instance.accessToken;
                     }
 
                     const response = await fetch(mediaUrl, { headers });
