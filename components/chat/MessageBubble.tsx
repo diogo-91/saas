@@ -248,7 +248,8 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
             onClick={() => onMediaClick(msg.id)}
             onError={(e) => {
               const img = e.target as HTMLImageElement;
-              if (!img.dataset.fallback) {
+              // Only retry with proxy if we haven't already tried it
+              if (!img.dataset.fallback && !img.src.includes('/api/media')) {
                 img.dataset.fallback = '1';
                 img.src = `/api/media?msgId=${msg.id}`;
               } else {

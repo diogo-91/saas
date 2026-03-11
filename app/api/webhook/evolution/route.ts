@@ -62,7 +62,7 @@ function getMessagePreview(messageData: any): string {
       }
       return '📋 Template Message';
   }
-  
+
   if (messageType === 'templateButtonReplyMessage') {
       const btn = messagePayload?.templateButtonReplyMessage;
       return `🔘 ${btn?.selectedDisplayText || 'Button Reply'}`;
@@ -150,44 +150,44 @@ async function sendAiTextMessage(instance: any, remoteJid: string, text: string,
     if (response.ok && data?.key?.id) {
         const messageId = data.key.id;
         const timestamp = new Date();
-        
+
         const newMessage = {
-            id: messageId, 
-            chatId: chatId, 
-            fromMe: true, 
-            messageType: 'conversation', 
-            text: text, 
-            timestamp, 
-            status: 'sent' as const, 
+            id: messageId,
+            chatId: chatId,
+            fromMe: true,
+            messageType: 'conversation',
+            text: text,
+            timestamp,
+            status: 'sent' as const,
             isInternal: false,
-            isAi: true, 
+            isAi: true,
             quotedMessageText: null
         };
 
         await db.insert(messages).values(newMessage).onConflictDoNothing();
 
-        await db.update(chats).set({ 
-            lastMessageText: text, 
-            lastMessageTimestamp: timestamp, 
-            lastMessageFromMe: true, 
-            lastMessageStatus: 'sent' 
+        await db.update(chats).set({
+            lastMessageText: text,
+            lastMessageTimestamp: timestamp,
+            lastMessageFromMe: true,
+            lastMessageStatus: 'sent'
         }).where(eq(chats.id, chatId));
 
         const pusherChannel = `team-${teamId}`;
-        await pusherServer.trigger(pusherChannel, 'new-message', { 
+        await pusherServer.trigger(pusherChannel, 'new-message', {
             ...newMessage,
             timestamp: timestamp.toISOString(),
-            remoteJid, 
+            remoteJid,
             instance: instance.instanceName,
         });
-        
-        await pusherServer.trigger(pusherChannel, 'chat-list-update', { 
-            id: chatId, 
-            lastMessageText: text, 
-            lastMessageTimestamp: timestamp.toISOString(), 
-            lastMessageFromMe: true, 
-            lastMessageStatus: 'sent', 
-            remoteJid 
+
+        await pusherServer.trigger(pusherChannel, 'chat-list-update', {
+            id: chatId,
+            lastMessageText: text,
+            lastMessageTimestamp: timestamp.toISOString(),
+            lastMessageFromMe: true,
+            lastMessageStatus: 'sent',
+            remoteJid
         });
     }
 }
@@ -309,39 +309,161 @@ export async function POST(request: Request) {
     const instanceId = instance.id;
     const metaToken = instance.metaToken;
     const pusherChannel = `team-${teamId}`;
-    
+
     if ((body.event === 'messages.upsert' || body.event === 'send.message') && body.data) {
       const messageData = body.data;
       if (!messageData.key) {
           return NextResponse.json({ received_with_error: 'invalid message structure' });
       }
-      
+
       const remoteJid = getBestRemoteJid(messageData.key);
 
       if (
-          remoteJid.endsWith('@g.us') || 
-          remoteJid === 'status@broadcast' || 
+          remoteJid.endsWith('@g.us') ||
+          remoteJid === 'status@broadcast' ||
           remoteJid.endsWith('@newsletter') ||
-          remoteJid.includes('@lid') 
+          remoteJid.includes('@lid')
       ) {
           return NextResponse.json({ received_but_ignored: true, reason: 'group_status_or_lid_message' });
       }
 
       const messageType = messageData.messageType;
       if (
-          messageType === 'protocolMessage' || 
+          messageType === 'protocolMessage' ||
           messageType === 'senderKeyDistributionMessage' ||
-          !messageData.message 
+          !messageData.message
       ) {
           return NextResponse.json({ received_but_ignored: true, reason: 'protocol_message' });
       }
 
+      // ── Extract message payload and media content BEFORE the transaction ──
+      // This avoids holding a DB connection open during external HTTP calls.
+      const messagePayload = messageData.message;
+
+      const mediaContent = messagePayload?.imageMessage ||
+                           messagePayload?.audioMessage ||
+                           messagePayload?.videoMessage ||
+                           messagePayload?.documentMessage ||
+                           messagePayload?.stickerMessage;
+
+      // base64 can be at different locations depending on Evolution API version/config
+      const rawBase64 = messageData.base64 || messagePayload?.base64 || mediaContent?.base64;
+
+      let mediaDetails: any = {};
+
+      // ── Fetch and save media BEFORE the DB transaction ──
+      if (mediaContent) {
+          try {
+              let buffer: Buffer | null = null;
+              let resolvedMimetype: string | null = mediaContent.mimetype || mediaContent.mime_type || null;
+              const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+
+              if (rawBase64) {
+                  // base64 was included in the webhook payload
+                  const base64String = rawBase64.startsWith('data:') ? rawBase64.split(',')[1] || rawBase64 : rawBase64;
+                  buffer = Buffer.from(base64String, 'base64');
+                  console.log(`[webhook] base64 found in payload for ${messageType} (${instanceName})`);
+              } else if (instance.accessToken && instance.integration !== 'WHATSAPP-BUSINESS') {
+                  // No base64 in payload — ask Evolution API to download via Baileys
+                  try {
+                      const msgKey = {
+                          id: messageData.key?.id,
+                          fromMe: messageData.key?.fromMe ?? false,
+                          remoteJid: remoteJid,
+                      };
+                      console.log(`[webhook] calling getBase64FromMediaMessage for ${messageType} (${instanceName})`);
+                      const mediaRes = await fetch(
+                          `${EVOLUTION_API_URL}/message/getBase64FromMediaMessage/${instanceName}`,
+                          {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'apikey': instance.accessToken },
+                              body: JSON.stringify({ message: { key: msgKey } }),
+                          }
+                      );
+                      if (mediaRes.ok) {
+                          const mediaData = await mediaRes.json();
+                          const b64 = mediaData.base64 || mediaData.data?.base64;
+                          if (b64) {
+                              const clean = b64.startsWith('data:') ? b64.split(',')[1] : b64;
+                              buffer = Buffer.from(clean, 'base64');
+                              resolvedMimetype = mediaData.mimetype || mediaData.data?.mimetype || resolvedMimetype;
+                              console.log(`[webhook] getBase64FromMediaMessage OK for ${messageType} (${instanceName})`);
+                          } else {
+                              console.warn(`[webhook] getBase64FromMediaMessage: no base64 in response for ${instanceName}`);
+                          }
+                      } else {
+                          const errText = await mediaRes.text().catch(() => '');
+                          console.warn(`[webhook] getBase64FromMediaMessage failed: ${mediaRes.status} ${errText} (${instanceName})`);
+                      }
+                  } catch (fetchErr: any) {
+                      console.warn(`[webhook] getBase64FromMediaMessage error: ${fetchErr.message} (${instanceName})`);
+                  }
+              } else if (instance.integration === 'WHATSAPP-BUSINESS' && metaToken && mediaContent?.url) {
+                  // Meta Cloud API: fetch with Bearer token
+                  try {
+                      const response = await fetch(mediaContent.url, {
+                          headers: { 'Authorization': `Bearer ${metaToken}`, 'User-Agent': 'Evolution-Client/1.0' },
+                      });
+                      if (response.ok) {
+                          buffer = Buffer.from(await response.arrayBuffer());
+                          resolvedMimetype = mediaContent.mimetype;
+                      }
+                  } catch (fetchErr: any) {
+                      console.warn(`[webhook] Meta media fetch error: ${fetchErr.message}`);
+                  }
+              }
+
+              if (buffer) {
+                  const mimetype = resolvedMimetype || mediaContent.mimetype || mediaContent.mime_type;
+                  const extension = getExtensionFromMimetype(mimetype);
+
+                  if (extension) {
+                      const timestamp = Date.now();
+                      const uniqueId = uuidv4();
+                      const filename = `${timestamp}-${uniqueId}.${extension}`;
+                      const subDir = messageType.replace('Message', '').toLowerCase();
+                      const relativeDirPath = path.join('uploads', subDir);
+                      const absoluteDirPath = path.join(process.cwd(), 'public', relativeDirPath);
+                      const absoluteFilePath = path.join(absoluteDirPath, filename);
+
+                      await fs.mkdir(absoluteDirPath, { recursive: true });
+                      await fs.writeFile(absoluteFilePath, buffer);
+
+                      mediaDetails.mediaUrl = `/${relativeDirPath}/${filename}`;
+                      mediaDetails.mediaMimetype = mimetype;
+
+                      if (messageType === 'imageMessage') {
+                          mediaDetails.mediaCaption = mediaContent.caption || messagePayload?.caption || null;
+                          mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
+                      } else if (messageType === 'audioMessage') {
+                          mediaDetails.mediaSeconds = mediaContent.seconds;
+                          mediaDetails.mediaIsPtt = mediaContent.ptt || mediaContent.voice;
+                          mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
+                      } else if (messageType === 'videoMessage') {
+                          mediaDetails.mediaCaption = mediaContent.caption || messagePayload?.caption || null;
+                          mediaDetails.mediaSeconds = mediaContent.seconds;
+                          mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
+                      } else if (messageType === 'documentMessage') {
+                          mediaDetails.mediaCaption = mediaContent.caption || messagePayload?.caption || null;
+                          const originalName = mediaContent.fileName || mediaContent.filename || 'document';
+                          mediaDetails.text = originalName;
+                          mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
+                      }
+                      console.log(`[webhook] media saved: ${mediaDetails.mediaUrl}`);
+                  }
+              }
+          } catch (fileError: any) {
+              console.error('[webhook] Error processing media:', fileError.message);
+              mediaDetails.mediaUrl = null;
+          }
+      }
+
       let chatIdForAutomation: number | null = null;
       let textForAutomation: string | null = null;
-      let mediaDetails: any = {};
       let newMessageData: any = null;
       let chatUpdateData: any = null;
 
+      // ── DB transaction is now only for DB operations (no external HTTP) ──
       await db.transaction(async (tx) => {
         const isFromMe = messageData.key.fromMe === true;
         const incrementValue = isFromMe ? 0 : 1;
@@ -356,10 +478,10 @@ export async function POST(request: Request) {
         }
 
         const updateData: any = {
-            lastMessageText: messagePreview, 
+            lastMessageText: messagePreview,
             lastMessageTimestamp: messageTimestamp,
-            unreadCount: sql`${chats.unreadCount} + ${incrementValue}`, 
-            lastMessageFromMe: isFromMe, 
+            unreadCount: sql`${chats.unreadCount} + ${incrementValue}`,
+            lastMessageFromMe: isFromMe,
             lastMessageStatus: isFromMe ? 'sent' : null,
         };
 
@@ -375,26 +497,26 @@ export async function POST(request: Request) {
         const [chat] = await tx
           .insert(chats)
           .values({
-            teamId: teamId, 
-            remoteJid: remoteJid, 
+            teamId: teamId,
+            remoteJid: remoteJid,
             instanceId: instanceId,
-            name: initialChatName, 
-            pushName: messageData.pushName, 
+            name: initialChatName,
+            pushName: messageData.pushName,
             lastMessageText: messagePreview,
-            lastMessageTimestamp: messageTimestamp, 
+            lastMessageTimestamp: messageTimestamp,
             unreadCount: incrementValue,
-            lastMessageFromMe: isFromMe, 
+            lastMessageFromMe: isFromMe,
             lastMessageStatus: isFromMe ? 'sent' : null,
             lastCustomerInteraction: customerInteractionUpdate,
           })
           .onConflictDoUpdate({
-            target: [chats.teamId, chats.remoteJid, chats.instanceId], 
+            target: [chats.teamId, chats.remoteJid, chats.instanceId],
             set: updateData,
           })
           .returning({
-            id: chats.id, 
+            id: chats.id,
             remoteJid: chats.remoteJid,
-            lastMessageStatus: chats.lastMessageStatus, 
+            lastMessageStatus: chats.lastMessageStatus,
             lastMessageFromMe: chats.lastMessageFromMe,
             unreadCount: chats.unreadCount,
             instanceId: chats.instanceId,
@@ -405,112 +527,10 @@ export async function POST(request: Request) {
 
         chatIdForAutomation = chat.id;
 
-        const messagePayload = messageData.message;
-        
-        const mediaContent = messagePayload.imageMessage || 
-                             messagePayload.audioMessage || 
-                             messagePayload.videoMessage || 
-                             messagePayload.documentMessage || 
-                             messagePayload.stickerMessage;
-
-        // base64 can be at different locations depending on Evolution API version/config
-        const rawBase64 = messageData.base64 || messagePayload.base64 || mediaContent?.base64;
-
-        if (mediaContent) {
-            try {
-                let buffer: Buffer | null = null;
-                let resolvedMimetype: string | null = mediaContent.mimetype || mediaContent.mime_type || null;
-
-                if (rawBase64) {
-                    // base64 was included in the webhook payload
-                    const base64String = rawBase64.startsWith('data:') ? rawBase64.split(',')[1] || rawBase64 : rawBase64;
-                    buffer = Buffer.from(base64String, 'base64');
-                } else if (instance.accessToken && instance.integration !== 'WHATSAPP-BUSINESS') {
-                    // No base64 in payload — ask Evolution API to download via Baileys
-                    const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-                    const msgKey = {
-                        id: messageData.key?.id,
-                        fromMe: messageData.key?.fromMe ?? false,
-                        remoteJid: remoteJid,
-                    };
-
-                    // Try getBase64FromMediaMessage endpoint (Evolution API v2)
-                    const mediaRes = await fetch(
-                        `${EVOLUTION_API_URL}/message/getBase64FromMediaMessage/${instanceName}`,
-                        {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': instance.accessToken },
-                            body: JSON.stringify({ message: { key: msgKey } }),
-                        }
-                    );
-
-                    if (mediaRes.ok) {
-                        const mediaData = await mediaRes.json();
-                        const b64 = mediaData.base64 || mediaData.data?.base64;
-                        if (b64) {
-                            const clean = b64.startsWith('data:') ? b64.split(',')[1] : b64;
-                            buffer = Buffer.from(clean, 'base64');
-                            resolvedMimetype = mediaData.mimetype || mediaData.data?.mimetype || resolvedMimetype;
-                        }
-                    } else {
-                        console.warn('[webhook] getBase64FromMediaMessage failed:', mediaRes.status, instanceName);
-                    }
-                } else if (instance.integration === 'WHATSAPP-BUSINESS' && metaToken && mediaContent?.url) {
-                    // Meta Cloud API: fetch with Bearer token
-                    const response = await fetch(mediaContent.url, {
-                        headers: { 'Authorization': `Bearer ${metaToken}`, 'User-Agent': 'Evolution-Client/1.0' },
-                    });
-                    if (response.ok) {
-                        buffer = Buffer.from(await response.arrayBuffer());
-                    }
-                }
-
-                if (buffer) {
-                    const mimetype = resolvedMimetype || mediaContent.mimetype || mediaContent.mime_type;
-                    const extension = getExtensionFromMimetype(mimetype);
-
-                    if (extension) {
-                        const timestamp = Date.now();
-                        const uniqueId = uuidv4();
-                        const filename = `${timestamp}-${uniqueId}.${extension}`;
-                        const subDir = messageType.replace('Message', '').toLowerCase();
-                        const relativeDirPath = path.join('uploads', subDir);
-                        const absoluteDirPath = path.join(process.cwd(), 'public', relativeDirPath);
-                        const absoluteFilePath = path.join(absoluteDirPath, filename);
-                        
-                        await fs.mkdir(absoluteDirPath, { recursive: true });
-                        await fs.writeFile(absoluteFilePath, buffer);
-                        
-                        mediaDetails.mediaUrl = `/${relativeDirPath}/${filename}`;
-                        mediaDetails.mediaMimetype = mimetype;
-
-                        if (messageType === 'imageMessage') {
-                            mediaDetails.mediaCaption = mediaContent.caption || messagePayload.caption || null;
-                            mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
-                        } else if (messageType === 'audioMessage') {
-                            mediaDetails.mediaSeconds = mediaContent.seconds;
-                            mediaDetails.mediaIsPtt = mediaContent.ptt || mediaContent.voice;
-                            mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
-                        } else if (messageType === 'videoMessage') {
-                            mediaDetails.mediaCaption = mediaContent.caption || messagePayload.caption || null;
-                            mediaDetails.mediaSeconds = mediaContent.seconds;
-                            mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
-                        } else if (messageType === 'documentMessage') {
-                            mediaDetails.mediaCaption = mediaContent.caption || messagePayload.caption || null;
-                            const originalName = mediaContent.fileName || mediaContent.filename || 'document';
-                            mediaDetails.text = originalName;
-                            mediaDetails.mediaFileLength = mediaContent.fileLength?.toString();
-                        }
-                    }
-                }
-            } catch (fileError: any) {
-                console.error('Error saving media:', fileError);
-                mediaDetails.mediaUrl = null;
-            }
-        }
+        // messagePayload and mediaContent are from outer scope (pre-computed before transaction)
 
         let mainTextContent = messagePayload?.conversation || messagePayload?.extendedTextMessage?.text || null;
-        
+
         if (messageType === 'templateMessage') {
             const template = messagePayload?.templateMessage?.hydratedTemplate;
             mainTextContent = template?.hydratedContentText || template?.hydratedTitleText || 'Template Message';
@@ -541,33 +561,33 @@ export async function POST(request: Request) {
 
         textForAutomation = mainTextContent;
 
-        const quotedMessageText = messageType === 'templateMessage' 
-            ? JSON.stringify(messagePayload?.templateMessage) 
+        const quotedMessageText = messageType === 'templateMessage'
+            ? JSON.stringify(messagePayload?.templateMessage)
             : (messageData.quotedMessage ? JSON.stringify(messageData.quotedMessage) : null);
 
         const newMessage = {
-          id: messageData.key.id, 
-          chatId: chat.id, 
+          id: messageData.key.id,
+          chatId: chat.id,
           fromMe: isFromMe,
-          messageType: messageType, 
+          messageType: messageType,
           text: mainTextContent,
-          timestamp: messageTimestamp, 
+          timestamp: messageTimestamp,
           status: isFromMe ? 'sent' : 'delivered',
           quotedMessageText: quotedMessageText,
-          quotedMessageId: messageData.quotedMessage ? 'quoted' : null, 
+          quotedMessageId: messageData.quotedMessage ? 'quoted' : null,
           ...mediaDetails, ...contactData, ...locationData,
         };
 
         await tx.insert(messages).values(newMessage).onConflictDoNothing();
-        
+
         newMessageData = { ...newMessage, remoteJid: remoteJid, instance: instanceName, instanceId: instanceId, lastMessageTextPreview: messagePreview };
 
         chatUpdateData = {
-            id: chat.id, 
+            id: chat.id,
             lastMessageStatus: chat.lastMessageStatus,
-            lastMessageFromMe: chat.lastMessageFromMe, 
+            lastMessageFromMe: chat.lastMessageFromMe,
             unreadCount: chat.unreadCount,
-            remoteJid: chat.remoteJid, 
+            remoteJid: chat.remoteJid,
             lastMessageText: messagePreview,
             lastMessageTimestamp: messageTimestamp.toISOString(),
             instanceId: chat.instanceId,
@@ -579,7 +599,7 @@ export async function POST(request: Request) {
       if (newMessageData) {
           await pusherServer.trigger(pusherChannel, 'new-message', newMessageData);
       }
-      
+
       if (chatUpdateData) {
           await pusherServer.trigger(pusherChannel, 'chat-list-update', chatUpdateData);
       }
@@ -615,7 +635,7 @@ export async function POST(request: Request) {
                 const aiResponse = await processAIMessage(
                     teamId,
                     chatIdForAutomation,
-                    textForAutomation || '', 
+                    textForAutomation || '',
                     mediaDetails.mediaUrl
                 );
 
@@ -623,12 +643,12 @@ export async function POST(request: Request) {
                     const fullInstance = await db.query.evolutionInstances.findFirst({
                          where: eq(evolutionInstances.id, instanceId),
                     });
-                    
+
                     if(fullInstance?.accessToken) {
                         await sendAiTextMessage(
-                            { 
-                                instanceName: fullInstance.instanceName, 
-                                accessToken: fullInstance.accessToken 
+                            {
+                                instanceName: fullInstance.instanceName,
+                                accessToken: fullInstance.accessToken
                             },
                             remoteJid,
                             aiResponse,
@@ -649,7 +669,7 @@ export async function POST(request: Request) {
       for (const updateData of updates) {
           const messageKeyId = updateData.key?.id || updateData.keyId;
           const remoteJidRaw = updateData.key?.remoteJid || updateData.remoteJid;
-          
+
           const newApiStatus = updateData.status || updateData.update?.status;
 
           if (!messageKeyId || !newApiStatus) {
@@ -661,7 +681,7 @@ export async function POST(request: Request) {
           }
 
           let dbStatus: 'sent' | 'delivered' | 'read' | null = null;
-          
+
           const statusUpper = String(newApiStatus).toUpperCase();
 
           if (statusUpper === 'SENT' || statusUpper === 'SERVER_ACK') dbStatus = 'sent';
@@ -672,7 +692,7 @@ export async function POST(request: Request) {
             const currentMessage = await db.query.messages.findFirst({
                where: and(
                   eq(messages.id, messageKeyId),
-                  eq(messages.fromMe, true) 
+                  eq(messages.fromMe, true)
                ),
                columns: { id: true, status: true, timestamp: true, chatId: true }
             });
@@ -700,9 +720,9 @@ export async function POST(request: Request) {
 
                       if (chat) {
                           await pusherServer.trigger(pusherChannel, 'message-status-update', {
-                              messageId: updatedMsg.id, 
+                              messageId: updatedMsg.id,
                               status: updatedMsg.status,
-                              instance: instanceName, 
+                              instance: instanceName,
                               remoteJid: chat.remoteJid
                           });
 
@@ -716,13 +736,13 @@ export async function POST(request: Request) {
                               const chatCurrentWeight = getStatusWeight(chat.lastMessageStatus);
                               if (newWeight > chatCurrentWeight) {
                                   const updatedChats = await db.update(chats)
-                                  .set({ lastMessageStatus: dbStatus }) 
+                                  .set({ lastMessageStatus: dbStatus })
                                   .where(eq(chats.id, chat.id))
-                                  .returning({ 
-                                      id: chats.id, 
-                                      lastMessageStatus: chats.lastMessageStatus, 
-                                      remoteJid: chats.remoteJid, 
-                                      instanceId: chats.instanceId 
+                                  .returning({
+                                      id: chats.id,
+                                      lastMessageStatus: chats.lastMessageStatus,
+                                      remoteJid: chats.remoteJid,
+                                      instanceId: chats.instanceId
                                   });
 
                                   if(updatedChats.length > 0) {
@@ -744,11 +764,11 @@ export async function POST(request: Request) {
 
     } else if (body.event === 'contacts.update') {
         const contactsData = Array.isArray(body.data) ? body.data : [body.data];
-        
+
         for (const contact of contactsData) {
-            const rawId = contact.remoteJid || contact.id; 
-            if (rawId && (contact.profilePicUrl || contact.imgUrl)) { 
-                
+            const rawId = contact.remoteJid || contact.id;
+            if (rawId && (contact.profilePicUrl || contact.imgUrl)) {
+
                 const remoteJid = normalizeJid(rawId);
                 const newPicUrl = contact.profilePicUrl || contact.imgUrl;
 
