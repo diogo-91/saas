@@ -7,6 +7,17 @@ import { formatMessageForFrontend } from '@/lib/db/messages';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 
+// Fire-and-forget: avisa o n8n para pausar a IA quando humano envia mensagem
+function pauseAiAgent(phone: string) {
+  const webhookUrl = process.env.N8N_PAUSE_AI_WEBHOOK;
+  if (!webhookUrl) return;
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+  }).catch((err) => console.warn('[pauseAiAgent] Webhook error:', err.message));
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -41,7 +52,7 @@ export async function POST(request: NextRequest) {
       }
 
       const internalId = `internal_${Date.now()}`;
-      
+
       const internalMessageData = {
         id: internalId,
         chatId: chat.id,
@@ -76,40 +87,40 @@ export async function POST(request: NextRequest) {
     let targetChat = null;
 
     if (instanceId) {
-        activeInstance = await db.query.evolutionInstances.findFirst({
-            where: and(eq(evolutionInstances.id, Number(instanceId)), eq(evolutionInstances.teamId, team.id))
-        });
+      activeInstance = await db.query.evolutionInstances.findFirst({
+        where: and(eq(evolutionInstances.id, Number(instanceId)), eq(evolutionInstances.teamId, team.id))
+      });
 
-        if (activeInstance) {
-            targetChat = await db.query.chats.findFirst({
-                where: and(
-                    eq(chats.teamId, team.id),
-                    eq(chats.remoteJid, recipientJid),
-                    eq(chats.instanceId, activeInstance.id)
-                )
-            });
-        }
-    }
-
-    if (!activeInstance) {
+      if (activeInstance) {
         targetChat = await db.query.chats.findFirst({
-            where: and(
-                eq(chats.teamId, team.id),
-                eq(chats.remoteJid, recipientJid)
-            ),
-            with: {
-                instance: true
-            }
+          where: and(
+            eq(chats.teamId, team.id),
+            eq(chats.remoteJid, recipientJid),
+            eq(chats.instanceId, activeInstance.id)
+          )
         });
+      }
+    }
 
-        if (targetChat && targetChat.instance) {
-            activeInstance = targetChat.instance;
+    if (!activeInstance) {
+      targetChat = await db.query.chats.findFirst({
+        where: and(
+          eq(chats.teamId, team.id),
+          eq(chats.remoteJid, recipientJid)
+        ),
+        with: {
+          instance: true
         }
+      });
+
+      if (targetChat && targetChat.instance) {
+        activeInstance = targetChat.instance;
+      }
     }
     if (!activeInstance) {
-        activeInstance = await db.query.evolutionInstances.findFirst({
-            where: eq(evolutionInstances.teamId, team.id)
-        });
+      activeInstance = await db.query.evolutionInstances.findFirst({
+        where: eq(evolutionInstances.teamId, team.id)
+      });
     }
 
     if (!activeInstance || !activeInstance.instanceName || !activeInstance.accessToken) {
@@ -153,34 +164,34 @@ export async function POST(request: NextRequest) {
       let finalChatId = targetChat?.id;
 
       if (!finalChatId) {
-         const [newChat] = await tx.insert(chats).values({
-             teamId: team.id,
-             remoteJid: recipientJid,
-             instanceId: dbInstanceId,
-             name: recipientJid.split('@')[0],
-             lastMessageText: text,
-             lastMessageTimestamp: new Date(),
-             lastMessageFromMe: true,
-             unreadCount: 0,
-             lastMessageStatus: 'sent'
-         }).returning({ id: chats.id });
-         
-         finalChatId = newChat.id;
+        const [newChat] = await tx.insert(chats).values({
+          teamId: team.id,
+          remoteJid: recipientJid,
+          instanceId: dbInstanceId,
+          name: recipientJid.split('@')[0],
+          lastMessageText: text,
+          lastMessageTimestamp: new Date(),
+          lastMessageFromMe: true,
+          unreadCount: 0,
+          lastMessageStatus: 'sent'
+        }).returning({ id: chats.id });
+
+        finalChatId = newChat.id;
       } else {
-         await tx.update(chats)
-            .set({
-              lastMessageText: text,
-              lastMessageTimestamp: new Date(),
-              lastMessageFromMe: true,
-              unreadCount: 0,
-              lastMessageStatus: 'sent'
-            })
-            .where(eq(chats.id, finalChatId));
+        await tx.update(chats)
+          .set({
+            lastMessageText: text,
+            lastMessageTimestamp: new Date(),
+            lastMessageFromMe: true,
+            unreadCount: 0,
+            lastMessageStatus: 'sent'
+          })
+          .where(eq(chats.id, finalChatId));
       }
-      
+
       const messageContent = evolutionData.message?.extendedTextMessage || evolutionData.message;
       const messageText = messageContent?.text || evolutionData.message?.conversation || text;
-      
+
       const dbQuotedMessageId = quotedMessageData?.id || null;
       const dbQuotedMessageText = quotedMessageData ? JSON.stringify(quotedMessageData) : null;
 
@@ -190,7 +201,7 @@ export async function POST(request: NextRequest) {
         fromMe: true,
         messageType: evolutionData.messageType || (messageContent?.text ? 'extendedTextMessage' : 'conversation'),
         text: messageText,
-        timestamp: new Date(), 
+        timestamp: new Date(),
         status: 'sent' as const,
         mediaUrl: null,
         mediaMimetype: null,
@@ -212,6 +223,9 @@ export async function POST(request: NextRequest) {
       const [insertedMessage] = await tx.insert(messages).values(newMessageData).onConflictDoNothing().returning();
       savedMessage = insertedMessage || newMessageData;
     });
+
+    // Pausa IA no n8n (fire-and-forget) — apenas mensagens manuais, não internas
+    pauseAiAgent(recipientJid.replace('@s.whatsapp.net', '').replace('@g.us', ''));
 
     return NextResponse.json(formatMessageForFrontend(savedMessage || {}));
 

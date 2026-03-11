@@ -1,0 +1,103 @@
+{
+    "name": "Pausa IA - Mensagem Manual do Painel",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "pausa-ia",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "a1b2c3d4-0001-0001-0001-000000000001",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "pausa-ia"
+        },
+        {
+            "parameters": {
+                "resource": "row",
+                "operation": "update",
+                "tableId": "leads",
+                "filters": {
+                    "conditions": [
+                        {
+                            "keyName": "telefone",
+                            "keyValue": "={{ $json.body.phone }}"
+                        }
+                    ]
+                },
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "BOT_ATIVO",
+                            "fieldValue": true
+                        }
+                    ]
+                }
+            },
+            "id": "a1b2c3d4-0002-0002-0002-000000000002",
+            "name": "Supabase - Pausar IA",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "SUBSTITUA_PELO_ID_DA_SUA_CREDENCIAL",
+                    "name": "Supabase - VPS"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ success: true, phone: $('Webhook').item.json.body.phone }) }}"
+            },
+            "id": "a1b2c3d4-0003-0003-0003-000000000003",
+            "name": "Resposta OK",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase - Pausar IA",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase - Pausar IA": {
+            "main": [
+                [
+                    {
+                        "node": "Resposta OK",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "templateCredsSetupCompleted": false
+    }
+}

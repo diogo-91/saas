@@ -12,10 +12,21 @@ import ffmpeg from 'fluent-ffmpeg';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 
+// Fire-and-forget: pausa IA no n8n quando humano envia mensagem
+function pauseAiAgent(phone: string) {
+  const webhookUrl = process.env.N8N_PAUSE_AI_WEBHOOK;
+  if (!webhookUrl) return;
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+  }).catch((err) => console.warn('[pauseAiAgent] Webhook error:', err.message));
+}
+
 const convertToMp3 = async (inputBuffer: Buffer, inputMimeType: string): Promise<string> => {
   const tempId = uuidv4();
   const tempDir = os.tmpdir();
-  
+
   let inputExt = 'webm';
   if (inputMimeType.includes('mp4') || inputMimeType.includes('aac')) inputExt = 'mp4';
   else if (inputMimeType.includes('ogg')) inputExt = 'ogg';
@@ -34,16 +45,16 @@ const convertToMp3 = async (inputBuffer: Buffer, inputMimeType: string): Promise
         try {
           const mp3Buffer = await fs.readFile(outputPath);
           const base64 = mp3Buffer.toString('base64');
-          await fs.unlink(inputPath).catch(() => {});
-          await fs.unlink(outputPath).catch(() => {});
+          await fs.unlink(inputPath).catch(() => { });
+          await fs.unlink(outputPath).catch(() => { });
           resolve(base64);
         } catch (err) {
           reject(err);
         }
       })
       .on('error', async (err) => {
-        await fs.unlink(inputPath).catch(() => {});
-        await fs.unlink(outputPath).catch(() => {});
+        await fs.unlink(inputPath).catch(() => { });
+        await fs.unlink(outputPath).catch(() => { });
         reject(err);
       })
       .save(outputPath);
@@ -66,41 +77,41 @@ export async function POST(request: NextRequest) {
     let activeInstance = null;
     let targetChat = null;
     if (instanceId) {
-        activeInstance = await db.query.evolutionInstances.findFirst({
-            where: and(eq(evolutionInstances.id, Number(instanceId)), eq(evolutionInstances.teamId, team.id))
-        });
+      activeInstance = await db.query.evolutionInstances.findFirst({
+        where: and(eq(evolutionInstances.id, Number(instanceId)), eq(evolutionInstances.teamId, team.id))
+      });
 
-        if (activeInstance) {
-            targetChat = await db.query.chats.findFirst({
-                where: and(
-                    eq(chats.teamId, team.id),
-                    eq(chats.remoteJid, recipientJid),
-                    eq(chats.instanceId, activeInstance.id)
-                )
-            });
-        }
-    }
-
-    if (!activeInstance) {
+      if (activeInstance) {
         targetChat = await db.query.chats.findFirst({
-            where: and(
-                eq(chats.teamId, team.id),
-                eq(chats.remoteJid, recipientJid)
-            ),
-            with: {
-                instance: true
-            }
+          where: and(
+            eq(chats.teamId, team.id),
+            eq(chats.remoteJid, recipientJid),
+            eq(chats.instanceId, activeInstance.id)
+          )
         });
-
-        if (targetChat && targetChat.instance) {
-            activeInstance = targetChat.instance;
-        }
+      }
     }
 
     if (!activeInstance) {
-        activeInstance = await db.query.evolutionInstances.findFirst({
-            where: eq(evolutionInstances.teamId, team.id)
-        });
+      targetChat = await db.query.chats.findFirst({
+        where: and(
+          eq(chats.teamId, team.id),
+          eq(chats.remoteJid, recipientJid)
+        ),
+        with: {
+          instance: true
+        }
+      });
+
+      if (targetChat && targetChat.instance) {
+        activeInstance = targetChat.instance;
+      }
+    }
+
+    if (!activeInstance) {
+      activeInstance = await db.query.evolutionInstances.findFirst({
+        where: eq(evolutionInstances.teamId, team.id)
+      });
     }
 
     if (!activeInstance || !activeInstance.instanceName || !activeInstance.accessToken) {
@@ -113,43 +124,43 @@ export async function POST(request: NextRequest) {
     let publicMediaUrl: string | null = null;
 
     try {
-        const inputBuffer = Buffer.from(audioBase64, 'base64');
-        finalAudioBase64 = await convertToMp3(inputBuffer, audioMimeType);
+      const inputBuffer = Buffer.from(audioBase64, 'base64');
+      finalAudioBase64 = await convertToMp3(inputBuffer, audioMimeType);
 
-        try {
-          const timestamp = Date.now();
-          const uniqueId = uuidv4();
-          const filename = `${timestamp}-${uniqueId}.mp3`;
-          const relativeDirPath = path.join('uploads', 'audio');
-          const absoluteDirPath = path.join(process.cwd(), 'public', relativeDirPath);
-          const absoluteFilePath = path.join(absoluteDirPath, filename);
-          await fs.mkdir(absoluteDirPath, { recursive: true });
-          await fs.writeFile(absoluteFilePath, Buffer.from(finalAudioBase64, 'base64'));
-          publicMediaUrl = `/${relativeDirPath}/${filename}`;
-        } catch {
-          // Filesystem not available (serverless) — skip local file save
-        }
+      try {
+        const timestamp = Date.now();
+        const uniqueId = uuidv4();
+        const filename = `${timestamp}-${uniqueId}.mp3`;
+        const relativeDirPath = path.join('uploads', 'audio');
+        const absoluteDirPath = path.join(process.cwd(), 'public', relativeDirPath);
+        const absoluteFilePath = path.join(absoluteDirPath, filename);
+        await fs.mkdir(absoluteDirPath, { recursive: true });
+        await fs.writeFile(absoluteFilePath, Buffer.from(finalAudioBase64, 'base64'));
+        publicMediaUrl = `/${relativeDirPath}/${filename}`;
+      } catch {
+        // Filesystem not available (serverless) — skip local file save
+      }
 
     } catch (conversionError: any) {
-        console.warn(`Audio conversion failed, sending original: ${conversionError.message}`);
-        finalAudioBase64 = audioBase64;
+      console.warn(`Audio conversion failed, sending original: ${conversionError.message}`);
+      finalAudioBase64 = audioBase64;
     }
 
     const evolutionPayload: any = {
       number: recipientJid,
       delay: 1200,
       presence: 'recording',
-      quoted: quotedMessageData ? { 
-          key: { id: quotedMessageData.id },
-          message: quotedMessageData.text ? { conversation: quotedMessageData.text } : undefined
+      quoted: quotedMessageData ? {
+        key: { id: quotedMessageData.id },
+        message: quotedMessageData.text ? { conversation: quotedMessageData.text } : undefined
       } : undefined,
       audio: finalAudioBase64,
       mimetype: 'audio/mpeg',
       ptt: true,
     };
-    
+
     if (!evolutionPayload.quoted) {
-        delete evolutionPayload.quoted;
+      delete evolutionPayload.quoted;
     }
 
     const evolutionResponse = await fetch(
@@ -163,7 +174,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(evolutionPayload),
       }
     );
-    
+
     const evolutionData = await evolutionResponse.json() as any;
 
     if (!evolutionResponse.ok) {
@@ -172,40 +183,40 @@ export async function POST(request: NextRequest) {
     }
 
     if (!evolutionData.key || !evolutionData.key.id) {
-        console.error('Unexpected Evolution response (no key.id):', evolutionData);
-        return NextResponse.json({ error: 'Message sent but ID not returned.' }, { status: 400 });
+      console.error('Unexpected Evolution response (no key.id):', evolutionData);
+      return NextResponse.json({ error: 'Message sent but ID not returned.' }, { status: 400 });
     }
-    
+
     let savedMessage: any = null;
-    
+
     await db.transaction(async (tx) => {
       let finalChatId = targetChat?.id;
 
       if (!finalChatId) {
-         const [newChat] = await tx.insert(chats).values({
-             teamId: team.id,
-             remoteJid: recipientJid,
-             instanceId: dbInstanceId,
-             name: recipientJid.split('@')[0],
-             lastMessageText: '🎤 Audio',
-             lastMessageTimestamp: new Date(),
-             lastMessageFromMe: true,
-             unreadCount: 0,
-             lastMessageStatus: 'sent'
-         }).returning({ id: chats.id });
-         finalChatId = Number((newChat as any).id);
+        const [newChat] = await tx.insert(chats).values({
+          teamId: team.id,
+          remoteJid: recipientJid,
+          instanceId: dbInstanceId,
+          name: recipientJid.split('@')[0],
+          lastMessageText: '🎤 Audio',
+          lastMessageTimestamp: new Date(),
+          lastMessageFromMe: true,
+          unreadCount: 0,
+          lastMessageStatus: 'sent'
+        }).returning({ id: chats.id });
+        finalChatId = Number((newChat as any).id);
       } else {
-         await tx.update(chats)
-            .set({
-              lastMessageText: '🎤 Audio',
-              lastMessageTimestamp: new Date(),
-              lastMessageFromMe: true,
-              unreadCount: 0,
-              lastMessageStatus: 'sent'
-            })
-            .where(eq(chats.id, finalChatId));
+        await tx.update(chats)
+          .set({
+            lastMessageText: '🎤 Audio',
+            lastMessageTimestamp: new Date(),
+            lastMessageFromMe: true,
+            unreadCount: 0,
+            lastMessageStatus: 'sent'
+          })
+          .where(eq(chats.id, finalChatId));
       }
-      
+
       const audioMsg = evolutionData.message?.audioMessage;
       const finalMediaUrl = publicMediaUrl || audioMsg?.url || null;
 
@@ -241,9 +252,12 @@ export async function POST(request: NextRequest) {
         .values(newMessageData)
         .onConflictDoNothing()
         .returning();
-        
+
       savedMessage = insertedMessage || newMessageData;
     });
+
+    // Pausa IA no n8n (fire-and-forget)
+    pauseAiAgent(recipientJid.replace('@s.whatsapp.net', '').replace('@g.us', ''));
 
     return NextResponse.json(formatMessageForFrontend(savedMessage));
 

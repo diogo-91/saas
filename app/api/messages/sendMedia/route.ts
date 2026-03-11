@@ -11,6 +11,17 @@ import { v4 as uuidv4 } from 'uuid';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
 
+// Fire-and-forget: pausa IA no n8n quando humano envia mensagem
+function pauseAiAgent(phone: string) {
+    const webhookUrl = process.env.N8N_PAUSE_AI_WEBHOOK;
+    if (!webhookUrl) return;
+    fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+    }).catch((err) => console.warn('[pauseAiAgent] Webhook error:', err.message));
+}
+
 function getExtensionFromMimetype(mimetype: string | null): string | null {
     if (!mimetype) return null;
     const mimeMap: { [key: string]: string } = {
@@ -22,7 +33,7 @@ function getExtensionFromMimetype(mimetype: string | null): string | null {
         'application/vnd.ms-excel': 'xls',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
         'application/vnd.ms-powerpoint': 'ppt',
-         'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
         'text/vcard': 'vcf',
     };
     if (mimeMap[mimetype]) return mimeMap[mimetype];
@@ -37,197 +48,200 @@ function getMediaType(mimeType: string): { type: 'image' | 'video' | 'document',
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { recipientJid, fileBase64, mimeType, fileName, quotedMessageData, instanceId } = body;
+    try {
+        const body = await request.json();
+        const { recipientJid, fileBase64, mimeType, fileName, quotedMessageData, instanceId } = body;
 
-    if (!recipientJid || !fileBase64 || !mimeType || !fileName) {
-      return NextResponse.json({ error: 'recipientJid, fileBase64, mimeType and fileName are required' }, { status: 400 });
-    }
+        if (!recipientJid || !fileBase64 || !mimeType || !fileName) {
+            return NextResponse.json({ error: 'recipientJid, fileBase64, mimeType and fileName are required' }, { status: 400 });
+        }
 
-    const team = await getTeamForUser();
-    if (!team) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const team = await getTeamForUser();
+        if (!team) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    let activeInstance = null;
-    let targetChat = null;
+        let activeInstance = null;
+        let targetChat = null;
 
-    if (instanceId) {
-        activeInstance = await db.query.evolutionInstances.findFirst({
-            where: and(eq(evolutionInstances.id, Number(instanceId)), eq(evolutionInstances.teamId, team.id))
-        });
+        if (instanceId) {
+            activeInstance = await db.query.evolutionInstances.findFirst({
+                where: and(eq(evolutionInstances.id, Number(instanceId)), eq(evolutionInstances.teamId, team.id))
+            });
 
-        if (activeInstance) {
+            if (activeInstance) {
+                targetChat = await db.query.chats.findFirst({
+                    where: and(
+                        eq(chats.teamId, team.id),
+                        eq(chats.remoteJid, recipientJid),
+                        eq(chats.instanceId, activeInstance.id)
+                    )
+                });
+            }
+        }
+        if (!activeInstance) {
             targetChat = await db.query.chats.findFirst({
                 where: and(
                     eq(chats.teamId, team.id),
-                    eq(chats.remoteJid, recipientJid),
-                    eq(chats.instanceId, activeInstance.id)
-                )
+                    eq(chats.remoteJid, recipientJid)
+                ),
+                with: {
+                    instance: true
+                }
+            });
+
+            if (targetChat && targetChat.instance) {
+                activeInstance = targetChat.instance;
+            }
+        }
+
+        if (!activeInstance) {
+            activeInstance = await db.query.evolutionInstances.findFirst({
+                where: eq(evolutionInstances.teamId, team.id)
             });
         }
-    }
-    if (!activeInstance) {
-        targetChat = await db.query.chats.findFirst({
-            where: and(
-                eq(chats.teamId, team.id),
-                eq(chats.remoteJid, recipientJid)
-            ),
-            with: {
-                instance: true
-            }
-        });
 
-        if (targetChat && targetChat.instance) {
-            activeInstance = targetChat.instance;
+        if (!activeInstance || !activeInstance.instanceName || !activeInstance.accessToken) {
+            return NextResponse.json({ error: 'No connected instance found.' }, { status: 404 });
         }
-    }
 
-    if (!activeInstance) {
-        activeInstance = await db.query.evolutionInstances.findFirst({
-            where: eq(evolutionInstances.teamId, team.id)
-        });
-    }
+        const { instanceName, accessToken, id: dbInstanceId } = activeInstance;
+        const { type: mediaType, subDir, preview, msgType } = getMediaType(mimeType);
 
-    if (!activeInstance || !activeInstance.instanceName || !activeInstance.accessToken) {
-      return NextResponse.json({ error: 'No connected instance found.' }, { status: 404 });
-    }
+        let publicMediaUrl: string | null = null;
+        try {
+            const buffer = Buffer.from(fileBase64, 'base64');
+            const uniqueId = uuidv4();
+            const safeFileName = `${uniqueId}-${fileName.replace(/[^a-z0-9._-]/gi, '_')}`;
 
-    const { instanceName, accessToken, id: dbInstanceId } = activeInstance;
-    const { type: mediaType, subDir, preview, msgType } = getMediaType(mimeType);
+            const relativeDirPath = path.join('uploads', subDir);
+            const absoluteDirPath = path.join(process.cwd(), 'public', relativeDirPath);
+            const absoluteFilePath = path.join(absoluteDirPath, safeFileName);
 
-    let publicMediaUrl: string | null = null;
-    try {
-        const buffer = Buffer.from(fileBase64, 'base64');
-        const uniqueId = uuidv4();
-        const safeFileName = `${uniqueId}-${fileName.replace(/[^a-z0-9._-]/gi, '_')}`;
-        
-        const relativeDirPath = path.join('uploads', subDir);
-        const absoluteDirPath = path.join(process.cwd(), 'public', relativeDirPath);
-        const absoluteFilePath = path.join(absoluteDirPath, safeFileName);
-        
-        await fs.mkdir(absoluteDirPath, { recursive: true });
-        await fs.writeFile(absoluteFilePath, buffer);
-        
-        const webPath = relativeDirPath.split(path.sep).join('/');
-        publicMediaUrl = `/${webPath}/${safeFileName}`;
+            await fs.mkdir(absoluteDirPath, { recursive: true });
+            await fs.writeFile(absoluteFilePath, buffer);
 
-    } catch (fileError: any) {
-        console.error(`Failed to save file locally: ${fileError.message}`);
-    }
+            const webPath = relativeDirPath.split(path.sep).join('/');
+            publicMediaUrl = `/${webPath}/${safeFileName}`;
 
-    const evolutionPayload: any = {
-      number: recipientJid,
-      delay: 1200,
-      mediatype: mediaType,
-      media: fileBase64,
-      mimetype: mimeType,
-    };
+        } catch (fileError: any) {
+            console.error(`Failed to save file locally: ${fileError.message}`);
+        }
 
-    if (mediaType === 'document') {
-        evolutionPayload.fileName = fileName;
-    }
-
-    if (quotedMessageData && quotedMessageData.id) {
-        evolutionPayload.quoted = { 
-            key: { id: quotedMessageData.id },
-            message: quotedMessageData.text ? { conversation: quotedMessageData.text } : undefined
+        const evolutionPayload: any = {
+            number: recipientJid,
+            delay: 1200,
+            mediatype: mediaType,
+            media: fileBase64,
+            mimetype: mimeType,
         };
-    }
 
-    const evolutionResponse = await fetch(
-      `${EVOLUTION_API_URL}/message/sendMedia/${instanceName}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': accessToken },
-        body: JSON.stringify(evolutionPayload),
-      }
-    );
-    
-    const evolutionData = await evolutionResponse.json() as any;
-    
-    if (!evolutionResponse.ok) {
-      console.error(`Evolution API Error (sendMedia) for ${instanceName}:`, evolutionData);
-      const errorMsg = evolutionData?.message || evolutionData?.error || 'Evolution API Error';
-      return NextResponse.json({ error: errorMsg }, { status: evolutionResponse.status });
-    }
-
-    if (!evolutionData?.key?.id) {
-        console.error("Evolution returned 200 OK, but without ID:", evolutionData);
-        if (evolutionData.message && evolutionData.code) {
-             return NextResponse.json({ error: `WhatsApp API Error: ${evolutionData.message}` }, { status: 400 });
+        if (mediaType === 'document') {
+            evolutionPayload.fileName = fileName;
         }
-        return NextResponse.json({ error: 'Unexpected Error: API did not return message ID.' }, { status: 500 });
+
+        if (quotedMessageData && quotedMessageData.id) {
+            evolutionPayload.quoted = {
+                key: { id: quotedMessageData.id },
+                message: quotedMessageData.text ? { conversation: quotedMessageData.text } : undefined
+            };
+        }
+
+        const evolutionResponse = await fetch(
+            `${EVOLUTION_API_URL}/message/sendMedia/${instanceName}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': accessToken },
+                body: JSON.stringify(evolutionPayload),
+            }
+        );
+
+        const evolutionData = await evolutionResponse.json() as any;
+
+        if (!evolutionResponse.ok) {
+            console.error(`Evolution API Error (sendMedia) for ${instanceName}:`, evolutionData);
+            const errorMsg = evolutionData?.message || evolutionData?.error || 'Evolution API Error';
+            return NextResponse.json({ error: errorMsg }, { status: evolutionResponse.status });
+        }
+
+        if (!evolutionData?.key?.id) {
+            console.error("Evolution returned 200 OK, but without ID:", evolutionData);
+            if (evolutionData.message && evolutionData.code) {
+                return NextResponse.json({ error: `WhatsApp API Error: ${evolutionData.message}` }, { status: 400 });
+            }
+            return NextResponse.json({ error: 'Unexpected Error: API did not return message ID.' }, { status: 500 });
+        }
+
+        let savedMessage: any = null;
+
+        await db.transaction(async (tx) => {
+            let finalChatId = targetChat?.id;
+
+            if (finalChatId) {
+                await tx.update(chats)
+                    .set({
+                        lastMessageText: preview,
+                        lastMessageTimestamp: new Date(),
+                        lastMessageFromMe: true,
+                        unreadCount: 0,
+                        lastMessageStatus: 'sent'
+                    })
+                    .where(eq(chats.id, finalChatId));
+            } else {
+                const [newChat] = await tx.insert(chats).values({
+                    teamId: team.id,
+                    remoteJid: recipientJid,
+                    instanceId: dbInstanceId,
+                    name: recipientJid.split('@')[0],
+                    lastMessageText: preview,
+                    lastMessageTimestamp: new Date(),
+                    lastMessageFromMe: true,
+                    unreadCount: 0,
+                    lastMessageStatus: 'sent'
+                }).returning({ id: chats.id });
+                finalChatId = (newChat as { id: number }).id;
+            }
+
+            const mediaMsg = evolutionData.message?.[msgType!];
+            const finalMediaUrl = publicMediaUrl || mediaMsg?.url || null;
+
+            const dbQuotedMessageId = quotedMessageData?.id || null;
+            const dbQuotedMessageText = quotedMessageData ? JSON.stringify(quotedMessageData) : null;
+
+            const newMessageData = {
+                id: evolutionData.key.id,
+                chatId: finalChatId,
+                fromMe: true,
+                messageType: msgType,
+                text: (mediaType === 'document') ? fileName : null,
+                timestamp: new Date(),
+                status: 'sent' as const,
+                mediaUrl: finalMediaUrl,
+                mediaMimetype: mimeType,
+                mediaCaption: mediaMsg?.caption || null,
+                mediaFileLength: mediaMsg?.fileLength?.toString() || null,
+                mediaSeconds: (mediaType === 'video' ? mediaMsg?.seconds : null),
+                mediaIsPtt: null,
+                contactName: null,
+                contactVcard: null,
+                locationLatitude: null,
+                locationLongitude: null,
+                locationName: null,
+                locationAddress: null,
+                quotedMessageId: dbQuotedMessageId,
+                quotedMessageText: dbQuotedMessageText,
+                isInternal: false
+            };
+
+            const [insertedMessage] = await tx.insert(messages).values(newMessageData as any).onConflictDoNothing().returning();
+            savedMessage = insertedMessage || newMessageData;
+        });
+
+        // Pausa IA no n8n (fire-and-forget)
+        pauseAiAgent(recipientJid.replace('@s.whatsapp.net', '').replace('@g.us', ''));
+
+        return NextResponse.json(formatMessageForFrontend(savedMessage));
+
+    } catch (error: any) {
+        console.error('Error in API /api/messages/sendMedia:', error);
+        return NextResponse.json({ error: 'Internal Server Error: ' + error.message }, { status: 500 });
     }
-
-    let savedMessage: any = null;
-    
-    await db.transaction(async (tx) => {
-      let finalChatId = targetChat?.id;
-
-      if (finalChatId) {
-         await tx.update(chats)
-            .set({ 
-                lastMessageText: preview, 
-                lastMessageTimestamp: new Date(),
-                lastMessageFromMe: true,
-                unreadCount: 0,
-                lastMessageStatus: 'sent'
-            })
-            .where(eq(chats.id, finalChatId));
-      } else {
-         const [newChat] = await tx.insert(chats).values({
-             teamId: team.id,
-             remoteJid: recipientJid,
-             instanceId: dbInstanceId, 
-             name: recipientJid.split('@')[0],
-             lastMessageText: preview,
-             lastMessageTimestamp: new Date(),
-             lastMessageFromMe: true,
-             unreadCount: 0,
-             lastMessageStatus: 'sent'
-         }).returning({ id: chats.id });
-         finalChatId = (newChat as { id: number }).id;
-      }
-      
-      const mediaMsg = evolutionData.message?.[msgType!];
-      const finalMediaUrl = publicMediaUrl || mediaMsg?.url || null;
-
-      const dbQuotedMessageId = quotedMessageData?.id || null;
-      const dbQuotedMessageText = quotedMessageData ? JSON.stringify(quotedMessageData) : null;
-
-      const newMessageData = {
-        id: evolutionData.key.id, 
-        chatId: finalChatId,
-        fromMe: true,
-        messageType: msgType,
-        text: (mediaType === 'document') ? fileName : null,
-        timestamp: new Date(),
-        status: 'sent' as const,
-        mediaUrl: finalMediaUrl,
-        mediaMimetype: mimeType,
-        mediaCaption: mediaMsg?.caption || null,
-        mediaFileLength: mediaMsg?.fileLength?.toString() || null,
-        mediaSeconds: (mediaType === 'video' ? mediaMsg?.seconds : null),
-        mediaIsPtt: null,
-        contactName: null,
-        contactVcard: null,
-        locationLatitude: null,
-        locationLongitude: null,
-        locationName: null,
-        locationAddress: null,
-        quotedMessageId: dbQuotedMessageId,
-        quotedMessageText: dbQuotedMessageText,
-        isInternal: false
-      };
-      
-      const [insertedMessage] = await tx.insert(messages).values(newMessageData as any).onConflictDoNothing().returning();
-      savedMessage = insertedMessage || newMessageData;
-    });
-
-    return NextResponse.json(formatMessageForFrontend(savedMessage));
-
-  } catch (error: any) {
-    console.error('Error in API /api/messages/sendMedia:', error);
-    return NextResponse.json({ error: 'Internal Server Error: ' + error.message }, { status: 500 });
-  }
 }
