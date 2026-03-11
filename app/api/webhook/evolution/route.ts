@@ -417,6 +417,19 @@ export async function POST(request: Request) {
         const rawBase64 = messageData.base64 || messagePayload.base64 || mediaContent?.base64;
         const mediaUrl = mediaContent?.url;
 
+        // DEBUG: log media fields to understand payload structure
+        if (mediaContent) {
+            console.log('[webhook-media-debug]', JSON.stringify({
+                messageType,
+                hasDataBase64: !!messageData.base64,
+                hasPayloadBase64: !!messagePayload.base64,
+                hasMediaBase64: !!mediaContent?.base64,
+                hasMediaUrl: !!mediaUrl,
+                dataBase64Length: messageData.base64?.length,
+                mediaKeys: Object.keys(mediaContent || {}),
+            }));
+        }
+
         if ((rawBase64 || mediaUrl) && mediaContent) {
             try {
                 let buffer: Buffer | null = null;
