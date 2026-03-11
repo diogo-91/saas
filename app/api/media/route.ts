@@ -24,8 +24,8 @@ function getExtensionFromMimetype(mimetype: string): string {
 
 /**
  * GET /api/media?msgId=xxx
- * Fetches media for a message from Evolution API and returns it as a binary response.
- * Also caches the file locally for future requests.
+ * Fetches media for a message using Evolution API's getBase64FromMediaMessage endpoint.
+ * Caches the result locally and updates the DB for future requests.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const msgId = request.nextUrl.searchParams.get('msgId');
     if (!msgId) return NextResponse.json({ error: 'msgId is required' }, { status: 400 });
 
-    // Look up message → chat → instance
+    // Look up message
     const msg = await db.query.messages.findFirst({
       where: eq(messages.id, msgId),
       columns: { id: true, chatId: true, mediaUrl: true, mediaMimetype: true, messageType: true, fromMe: true },
@@ -43,18 +43,18 @@ export async function GET(request: NextRequest) {
 
     if (!msg) return NextResponse.json({ error: 'Message not found' }, { status: 404 });
 
-    // If mediaUrl is already set and the file exists locally, redirect to it
+    // If local file already exists, serve it directly
     if (msg.mediaUrl && msg.mediaUrl.startsWith('/uploads/')) {
       const localPath = path.join(process.cwd(), 'public', msg.mediaUrl);
       try {
         await fs.access(localPath);
         return NextResponse.redirect(new URL(msg.mediaUrl, request.url));
       } catch {
-        // File doesn't exist locally, continue to fetch from Evolution API
+        // File missing locally — fall through to re-fetch
       }
     }
 
-    // Get chat → instance info
+    // Get chat remoteJid + instance credentials
     const chat = await db.query.chats.findFirst({
       where: eq(chats.id, msg.chatId),
       columns: { remoteJid: true, instanceId: true },
@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
 
     if (!instance?.accessToken) return NextResponse.json({ error: 'No API key configured' }, { status: 503 });
 
-    // Call Evolution API to get media base64
+    // Ask Evolution API to download + decrypt the media via Baileys
     const res = await fetch(
-      `${EVOLUTION_API_URL}/message/findMessages/${instance.instanceName}`,
+      `${EVOLUTION_API_URL}/message/getBase64FromMediaMessage/${instance.instanceName}`,
       {
         method: 'POST',
         headers: {
@@ -79,52 +79,32 @@ export async function GET(request: NextRequest) {
           'apikey': instance.accessToken,
         },
         body: JSON.stringify({
-          where: { key: { id: msgId } },
-          page: 1,
-          offset: 1,
+          message: {
+            key: {
+              id: msgId,
+              fromMe: msg.fromMe ?? false,
+              remoteJid: chat.remoteJid,
+            },
+          },
         }),
       }
     );
 
     if (!res.ok) {
-      return NextResponse.json({ error: 'Evolution API error', status: res.status }, { status: 502 });
+      console.error('[media proxy] Evolution API error:', res.status, await res.text().catch(() => ''));
+      return NextResponse.json({ error: 'Media not available' }, { status: 404 });
     }
 
     const data = await res.json();
+    const b64Raw: string | undefined = data.base64 || data.data?.base64;
+    const mimetype: string = data.mimetype || data.data?.mimetype || msg.mediaMimetype || 'application/octet-stream';
 
-    // Evolution API returns messages array; find the one with base64 or url
-    const msgs: any[] = Array.isArray(data) ? data : (data.messages || data.records || []);
-    const found = msgs.find((m: any) => m.key?.id === msgId) || msgs[0];
-
-    if (!found) return NextResponse.json({ error: 'Message not found in Evolution API' }, { status: 404 });
-
-    const msgContent = found.message || {};
-    const mediaContent =
-      msgContent.imageMessage ||
-      msgContent.videoMessage ||
-      msgContent.audioMessage ||
-      msgContent.documentMessage ||
-      msgContent.stickerMessage;
-
-    const base64Data: string | undefined = mediaContent?.base64 || found.base64;
-    const cdnUrl: string | undefined = mediaContent?.url;
-    const mimetype: string = mediaContent?.mimetype || msg.mediaMimetype || 'application/octet-stream';
-
-    let buffer: Buffer | null = null;
-
-    if (base64Data) {
-      const b64 = base64Data.startsWith('data:') ? base64Data.split(',')[1] : base64Data;
-      buffer = Buffer.from(b64, 'base64');
-    } else if (cdnUrl) {
-      const cdnRes = await fetch(cdnUrl, {
-        headers: { 'apikey': instance.accessToken, 'User-Agent': 'Evolution-Client/1.0' },
-      });
-      if (cdnRes.ok) {
-        buffer = Buffer.from(await cdnRes.arrayBuffer());
-      }
+    if (!b64Raw) {
+      return NextResponse.json({ error: 'No base64 in Evolution API response' }, { status: 404 });
     }
 
-    if (!buffer) return NextResponse.json({ error: 'Media not available' }, { status: 404 });
+    const b64 = b64Raw.startsWith('data:') ? b64Raw.split(',')[1] : b64Raw;
+    const buffer = Buffer.from(b64, 'base64');
 
     // Cache locally
     try {
@@ -136,14 +116,13 @@ export async function GET(request: NextRequest) {
       await fs.mkdir(absDir, { recursive: true });
       await fs.writeFile(path.join(absDir, filename), buffer);
 
-      // Update DB with the cached local URL
       const localUrl = `/${relativeDirPath}/${filename}`;
       await db
         .update(messages)
         .set({ mediaUrl: localUrl, mediaMimetype: mimetype })
         .where(eq(messages.id, msgId));
-    } catch {
-      // Cache failure is non-fatal — just serve from memory
+    } catch (cacheErr: any) {
+      console.warn('[media proxy] cache write failed:', cacheErr.message);
     }
 
     return new NextResponse(buffer, {

@@ -413,53 +413,60 @@ export async function POST(request: Request) {
                              messagePayload.documentMessage || 
                              messagePayload.stickerMessage;
 
-        // Evolution API sends base64 at body.data.base64 (not inside message payload)
+        // base64 can be at different locations depending on Evolution API version/config
         const rawBase64 = messageData.base64 || messagePayload.base64 || mediaContent?.base64;
-        const mediaUrl = mediaContent?.url;
 
-        // DEBUG: log media fields to understand payload structure
         if (mediaContent) {
-            console.log('[webhook-media-debug]', JSON.stringify({
-                messageType,
-                hasDataBase64: !!messageData.base64,
-                hasPayloadBase64: !!messagePayload.base64,
-                hasMediaBase64: !!mediaContent?.base64,
-                hasMediaUrl: !!mediaUrl,
-                dataBase64Length: messageData.base64?.length,
-                mediaKeys: Object.keys(mediaContent || {}),
-            }));
-        }
-
-        if ((rawBase64 || mediaUrl) && mediaContent) {
             try {
                 let buffer: Buffer | null = null;
+                let resolvedMimetype: string | null = mediaContent.mimetype || mediaContent.mime_type || null;
 
                 if (rawBase64) {
+                    // base64 was included in the webhook payload
                     const base64String = rawBase64.startsWith('data:') ? rawBase64.split(',')[1] || rawBase64 : rawBase64;
                     buffer = Buffer.from(base64String, 'base64');
-                } 
-                else if (mediaUrl) {
-                    const headers: HeadersInit = {
-                        'User-Agent': 'Evolution-Client/1.0'
+                } else if (instance.accessToken && instance.integration !== 'WHATSAPP-BUSINESS') {
+                    // No base64 in payload — ask Evolution API to download via Baileys
+                    const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+                    const msgKey = {
+                        id: messageData.key?.id,
+                        fromMe: messageData.key?.fromMe ?? false,
+                        remoteJid: remoteJid,
                     };
 
-                    // Meta Cloud API uses Bearer token; Baileys uses Evolution API key
-                    if (instance.integration === 'WHATSAPP-BUSINESS' && metaToken) {
-                        headers['Authorization'] = `Bearer ${metaToken}`;
-                    } else if (instance.accessToken) {
-                        headers['apikey'] = instance.accessToken;
-                    }
+                    // Try getBase64FromMediaMessage endpoint (Evolution API v2)
+                    const mediaRes = await fetch(
+                        `${EVOLUTION_API_URL}/message/getBase64FromMediaMessage/${instanceName}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'apikey': instance.accessToken },
+                            body: JSON.stringify({ message: { key: msgKey } }),
+                        }
+                    );
 
-                    const response = await fetch(mediaUrl, { headers });
-                    
+                    if (mediaRes.ok) {
+                        const mediaData = await mediaRes.json();
+                        const b64 = mediaData.base64 || mediaData.data?.base64;
+                        if (b64) {
+                            const clean = b64.startsWith('data:') ? b64.split(',')[1] : b64;
+                            buffer = Buffer.from(clean, 'base64');
+                            resolvedMimetype = mediaData.mimetype || mediaData.data?.mimetype || resolvedMimetype;
+                        }
+                    } else {
+                        console.warn('[webhook] getBase64FromMediaMessage failed:', mediaRes.status, instanceName);
+                    }
+                } else if (instance.integration === 'WHATSAPP-BUSINESS' && metaToken && mediaContent?.url) {
+                    // Meta Cloud API: fetch with Bearer token
+                    const response = await fetch(mediaContent.url, {
+                        headers: { 'Authorization': `Bearer ${metaToken}`, 'User-Agent': 'Evolution-Client/1.0' },
+                    });
                     if (response.ok) {
-                        const arrayBuffer = await response.arrayBuffer();
-                        buffer = Buffer.from(arrayBuffer);
+                        buffer = Buffer.from(await response.arrayBuffer());
                     }
                 }
 
                 if (buffer) {
-                    const mimetype = mediaContent.mimetype || mediaContent.mime_type;
+                    const mimetype = resolvedMimetype || mediaContent.mimetype || mediaContent.mime_type;
                     const extension = getExtensionFromMimetype(mimetype);
 
                     if (extension) {
