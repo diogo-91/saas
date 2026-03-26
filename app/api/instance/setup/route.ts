@@ -118,13 +118,16 @@ export async function POST(request: Request) {
                 const existingData = await existingInstanceResponse.json();
                 
                 const foundInstance = Array.isArray(existingData)
-                    ? existingData.find((i: any) => i.instance?.instanceName === instanceName)
+                    ? (existingData.find((i: any) => i.instance?.instanceName === instanceName)
+                        || existingData.find((i: any) => i.instanceName === instanceName)
+                        || (existingData.length === 1 ? existingData[0] : null))
                     : existingData;
 
                 if (foundInstance) {
-                     createData = foundInstance; 
-                } else { 
-                    throw new Error(`Instance ${instanceName} exists but was not found in the list.`); 
+                    // Normalize: wrap in { instance } if needed
+                    createData = foundInstance.instance ? foundInstance : { instance: foundInstance, hash: foundInstance.token };
+                } else {
+                    throw new Error(`Instance ${instanceName} exists but was not found in the list.`);
                 }
             } else { 
                 throw new Error(`Failed to fetch existing instance data for ${instanceName}. Check if API Key is correct.`); 
