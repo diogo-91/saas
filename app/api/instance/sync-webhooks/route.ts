@@ -4,6 +4,7 @@ import { evolutionInstances } from '@/lib/db/schema';
 import { getTeamForUser } from '@/lib/db/queries';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+const MASTER_API_KEY = process.env.AUTHENTICATION_API_KEY;
 const YOUR_PUBLIC_WEBHOOK_URL = process.env.NEXT_PUBLIC_EVOLUTION_WEBHOOK_URL
   || (process.env.NEXT_PUBLIC_WEBHOOK_URL ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhook/evolution` : undefined);
 
@@ -32,8 +33,9 @@ export async function POST() {
     const results: { instanceName: string; status: string; error?: string }[] = [];
 
     for (const instance of instances) {
-      if (!instance.accessToken) {
-        results.push({ instanceName: instance.instanceName, status: 'skipped', error: 'no accessToken' });
+      const apiKey = instance.accessToken || MASTER_API_KEY;
+      if (!apiKey) {
+        results.push({ instanceName: instance.instanceName, status: 'skipped', error: 'no apikey' });
         continue;
       }
 
@@ -44,7 +46,7 @@ export async function POST() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'apikey': instance.accessToken,
+              'apikey': apiKey,
             },
             body: JSON.stringify({
               url: YOUR_PUBLIC_WEBHOOK_URL,
