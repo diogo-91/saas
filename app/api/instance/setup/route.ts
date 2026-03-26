@@ -117,8 +117,8 @@ export async function POST(request: Request) {
             if (existingInstanceResponse.ok) {
                 const existingData = await existingInstanceResponse.json();
                 
-                const foundInstance = Array.isArray(existingData) 
-                    ? existingData.find((i: any) => i.instance.instanceName === instanceName) 
+                const foundInstance = Array.isArray(existingData)
+                    ? existingData.find((i: any) => i.instance?.instanceName === instanceName)
                     : existingData;
 
                 if (foundInstance) {
@@ -145,7 +145,9 @@ export async function POST(request: Request) {
 
     let qrData = null;
 
-    if (integration === "WHATSAPP-BAILEYS") {
+    const isAlreadyConnected = createData.instance?.connectionStatus === 'open' || createData.instance?.status === 'open';
+
+    if (integration === "WHATSAPP-BAILEYS" && !isAlreadyConnected) {
       const connectResponse = await fetch(
         `${EVOLUTION_API_URL}/instance/connect/${instanceName}`,
         {
@@ -158,10 +160,9 @@ export async function POST(request: Request) {
       if (!connectResponse.ok) {
           const error = await connectResponse.json();
           console.error("Failed to GET QR Code:", error);
-          return NextResponse.json({ error: 'Failed to fetch QR Code. Check if the instance is already connected.' }, { status: 500 });
+      } else {
+        qrData = await connectResponse.json();
       }
-
-      qrData = await connectResponse.json();
     }
 
     await db.insert(evolutionInstances)
