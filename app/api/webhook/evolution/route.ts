@@ -10,16 +10,59 @@ import { v4 as uuidv4 } from 'uuid';
 import { processAutomation } from '@/lib/automation/engine';
 import { processAIMessage } from '@/lib/plugins/ai-chat/service';
 
-// Optional: forward all events to an external webhook (e.g. n8n)
+// Forward all events to an external webhook (e.g. n8n)
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL;
+const N8N_PAUSE_AI_WEBHOOK = process.env.N8N_PAUSE_AI_WEBHOOK;
 
 function forwardToN8n(body: any) {
   if (!N8N_WEBHOOK_URL) return;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
   fetch(N8N_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  }).catch((err) => console.warn('[webhook] n8n forward failed:', err.message));
+    signal: controller.signal,
+  })
+    .then(() => clearTimeout(timeout))
+    .catch((err) => {
+      clearTimeout(timeout);
+      if (err.name !== 'AbortError') {
+        console.warn('[webhook] n8n forward failed:', err.message);
+      }
+    });
+}
+
+// Notifies n8n to pause AI when the operator sends a manual message (fromMe via dashboard)
+function notifyPauseAI(body: any) {
+  if (!N8N_PAUSE_AI_WEBHOOK) return;
+  // Only trigger for outbound messages sent manually (fromMe = true)
+  if (body.event !== 'messages.upsert' && body.event !== 'send.message') return;
+  if (!body.data?.key?.fromMe) return;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  fetch(N8N_PAUSE_AI_WEBHOOK, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      instance: body.instance,
+      remoteJid: body.data?.key?.remoteJid,
+      messageId: body.data?.key?.id,
+      pushName: body.data?.pushName,
+    }),
+    signal: controller.signal,
+  })
+    .then(() => clearTimeout(timeout))
+    .catch((err) => {
+      clearTimeout(timeout);
+      if (err.name !== 'AbortError') {
+        console.warn('[webhook] pause-ai forward failed:', err.message);
+      }
+    });
 }
 
 function normalizeJid(jid: string): string {
@@ -283,6 +326,8 @@ export async function POST(request: Request) {
 
     // Forward raw event to n8n (fire-and-forget, does not block processing)
     forwardToN8n(body);
+    // Notify n8n to pause AI if operator sent a manual message
+    notifyPauseAI(body);
 
     const instanceName = body.instance;
 
