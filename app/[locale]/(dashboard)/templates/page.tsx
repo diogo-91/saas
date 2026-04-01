@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import { WhatsAppPreview } from '@/components/templates/WhatsAppPreview';
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 type WabaTemplate = {
     id: number;

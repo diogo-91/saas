@@ -16,6 +16,7 @@ import { Trash2, LogOut, QrCode, Plus, Smartphone, Settings as SettingsIcon, Mor
 import PusherClient from 'pusher-js';
 import useSWR from 'swr';
 import { useTranslations } from 'next-intl';
+import { fetcher } from '@/lib/fetcher';
 
 type TeamData = { id: number; };
 
@@ -35,8 +36,6 @@ type InstanceDetailItem = {
 type QrCodeApiResponse = {
   base64: string | null;
 };
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function ConnectInstanceForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void; }) {
   const t = useTranslations('Settings');

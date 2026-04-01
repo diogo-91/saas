@@ -53,7 +53,7 @@ import {
 import { ActionState } from '@/lib/auth/middleware';
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 function SubscriptionSkeleton() {
   const t = useTranslations('Settings');

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 function StatusBadge({ status }: { status: string }) {
     const t = useTranslations('CampaignDetails');

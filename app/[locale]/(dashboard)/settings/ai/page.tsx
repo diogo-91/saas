@@ -18,7 +18,7 @@ import { ToolsManager } from '@/components/ai/ToolsManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 const MODELS = {
   openai: [

@@ -19,7 +19,7 @@ import { Sidebar } from '@/components/interface/Sidebar';
 import Logo from '@/components/interface/Logo';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

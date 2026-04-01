@@ -12,7 +12,7 @@ import useSWR from 'swr';
 import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 type ActionState = {
   name?: string;

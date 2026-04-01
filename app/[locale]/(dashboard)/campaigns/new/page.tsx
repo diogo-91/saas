@@ -14,7 +14,7 @@ import { WhatsAppPreview } from '@/components/templates/WhatsAppPreview';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 export default function NewCampaignPage() {
     const t = useTranslations('NewCampaign');

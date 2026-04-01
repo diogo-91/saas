@@ -30,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import EmojiPicker from 'emoji-picker-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+import { fetcher } from '@/lib/fetcher';
 
 type FunnelStage = {
     id: number;
@@ -51,8 +52,6 @@ type ChatCard = {
     showTimeInStage: boolean;
     instanceId?: number;
 };
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function getDaysInStage(dateString: string) {
     if (!dateString) return 0;
@@ -81,13 +80,13 @@ export default function KanbanBoard() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (stagesData) {
+        if (Array.isArray(stagesData)) {
             setStages([...stagesData].sort((a, b) => a.order - b.order));
         }
     }, [stagesData]);
 
     useEffect(() => {
-        if (stages.length > 0 && chats) {
+        if (stages.length > 0 && Array.isArray(chats)) {
             const newCols: Record<string, ChatCard[]> = {};
             stages.forEach(s => newCols[s.id] = []);
 

@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { fetcher } from '@/lib/fetcher';
 
 type CustomField = {
     id: number;
