@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         playNotificationSound();
       }
 
-      mutate('/api/chats', async (currentChats: Chat[] | undefined = []) => {
+      mutate('/api/chats', (currentChats: Chat[] | undefined = []) => {
         const chatsList = currentChats || [];
         
         const existingIndex = chatsList.findIndex(c => {
