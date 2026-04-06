@@ -13,7 +13,6 @@ const sendSchema = z.object({
   mediaUrl: z.string().url().optional(),
   fileName: z.string().optional(),
   mimetype: z.string().optional(),
-  isAi: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { instanceName, number, type, message, mediaUrl, fileName, mimetype, isAi } = validation.data;
+    const { instanceName, number, type, message, mediaUrl, fileName, mimetype } = validation.data;
 
     const instance = await db.query.evolutionInstances.findFirst({
       where: and(
@@ -168,8 +167,7 @@ export async function POST(req: NextRequest) {
         await db.insert(messages).values({
             id: responseData.key.id,
             chatId: chatId,
-            fromMe: !isAi,
-            isAi: isAi ?? false,
+            fromMe: true,
             messageType: messageTypeForDb,
             text: message || null,
             mediaUrl: mediaUrl || null,
