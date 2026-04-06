@@ -870,26 +870,6 @@ export async function POST(request: Request) {
       await pusherServer.trigger(pusherChannel, 'qr-update-needed', { instance: instanceName });
     } else if (body.event === 'connection.update' && body.data?.state) {
       await pusherServer.trigger(pusherChannel, 'connection-status', { status: body.data.state, instance: instanceName });
-
-      if (body.data.state === 'open') {
-        const webhookUrl = process.env.NEXT_PUBLIC_EVOLUTION_WEBHOOK_URL
-          || (process.env.NEXT_PUBLIC_WEBHOOK_URL ? `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhook/evolution` : null);
-
-        if (webhookUrl) {
-          const apiKey = instance.accessToken || process.env.AUTHENTICATION_API_KEY;
-          fetch(`${process.env.EVOLUTION_API_URL}/webhook/set/${instanceName}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
-            body: JSON.stringify({
-              url: webhookUrl,
-              enabled: true,
-              base64: true,
-              byEvents: false,
-              events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE', 'CHATS_UPDATE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'CONTACTS_UPDATE'],
-            }),
-          }).catch((err) => console.warn('[webhook] auto-configure failed:', err.message));
-        }
-      }
     }
 
     return NextResponse.json({ received: true });
