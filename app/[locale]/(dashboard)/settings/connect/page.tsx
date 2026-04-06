@@ -344,6 +344,24 @@ export default function ConnectInstancePage() {
     { revalidateOnFocus: true }
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  async function handleSyncWebhooks() {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/instance/sync-webhooks', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Webhooks sincronizados com sucesso!');
+      } else {
+        toast.error(data.error || 'Erro ao sincronizar webhooks');
+      }
+    } catch {
+      toast.error('Erro ao sincronizar webhooks');
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -395,7 +413,12 @@ export default function ConnectInstancePage() {
                 <p className="text-muted-foreground mt-1">{t('connections_desc')}</p>
              </div>
              
-             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+             <div className="flex gap-2">
+                <Button size="lg" variant="outline" onClick={handleSyncWebhooks} disabled={isSyncing} className="shadow-sm">
+                    {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <RefreshCw className="h-4 w-4 mr-2"/>}
+                    Sincronizar Webhooks
+                </Button>
+                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogTrigger asChild>
                     <Button size="lg" className="shadow-sm">
                         <Plus className="h-5 w-5 mr-2"/> {t('add_connection_btn')}
@@ -414,6 +437,7 @@ export default function ConnectInstancePage() {
                     />
                 </DialogContent>
              </Dialog>
+             </div>
         </div>
 
         {hasInstances ? (
