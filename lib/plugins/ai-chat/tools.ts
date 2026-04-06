@@ -55,8 +55,8 @@ async function sendMediaToEvolution(
             const newMessage = {
                 id: messageId, 
                 chatId: chatId, 
-                fromMe: true, 
-                messageType: `${type}Message`, 
+                fromMe: false,
+                messageType: `${type}Message`,
                 text: caption || "", 
                 timestamp, 
                 status: 'sent' as const, 
