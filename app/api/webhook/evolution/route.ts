@@ -39,7 +39,7 @@ function forwardToN8n(body: any) {
 function notifyPauseAI(body: any) {
   if (!N8N_PAUSE_AI_WEBHOOK) return;
   // Only trigger for outbound messages sent manually (fromMe = true)
-  if (body.event !== 'messages.upsert' && body.event !== 'send.message') return;
+  if (body.event !== 'messages.upsert') return;
   if (!body.data?.key?.fromMe) return;
 
   const controller = new AbortController();
@@ -197,7 +197,7 @@ async function sendAiTextMessage(instance: any, remoteJid: string, text: string,
         const newMessage = {
             id: messageId,
             chatId: chatId,
-            fromMe: true,
+            fromMe: false,
             messageType: 'conversation',
             text: text,
             timestamp,
@@ -212,7 +212,7 @@ async function sendAiTextMessage(instance: any, remoteJid: string, text: string,
         await db.update(chats).set({
             lastMessageText: text,
             lastMessageTimestamp: timestamp,
-            lastMessageFromMe: true,
+            lastMessageFromMe: false,
             lastMessageStatus: 'sent'
         }).where(eq(chats.id, chatId));
 
