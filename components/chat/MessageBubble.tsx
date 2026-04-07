@@ -628,6 +628,10 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
           </div>
         )}
 
+        <div className="flex flex-col">
+          {isFromMe && msg.senderName && !msg.isAi && !msg.isAutomation && (
+            <span className="text-[11px] font-semibold text-muted-foreground mb-0.5 text-right">{msg.senderName}:</span>
+          )}
         <div className={`px-3 py-2 rounded-2xl shadow-sm ${bubbleClass}`} style={{ maxWidth: '100%' }}>
           {msg.isAi && (
             <p className="text-[10px] font-medium opacity-60 mb-1 uppercase tracking-wide">Agente IA</p>
@@ -640,15 +644,13 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
               <Lock className="h-2.5 w-2.5" /> Nota Interna
             </p>
           )}
-          {isFromMe && msg.senderName && !msg.isAi && !msg.isAutomation && (
-            <p className="text-[10px] font-medium opacity-70 mb-1">{msg.senderName}</p>
-          )}
           {renderQuotedMessage()}
           {renderContent()}
           <div className={`flex items-center gap-1 mt-1 ${isFromMe ? 'justify-end' : 'justify-start'}`}>
             <span className="text-[10px] opacity-60">{formatTime(msg.timestamp)}</span>
             {isFromMe && <StatusIcon status={msg.status} />}
           </div>
+        </div>
         </div>
 
         {isFromMe && (

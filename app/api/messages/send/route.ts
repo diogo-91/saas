@@ -130,9 +130,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { instanceName, accessToken, id: dbInstanceId } = activeInstance;
+    const displayText = senderName ? `${senderName}: ${text}` : text;
     const evolutionPayload: any = {
       number: recipientJid,
-      text: text,
+      text: displayText,
     };
 
     if (quotedMessageData) {
