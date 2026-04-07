@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db/drizzle';
-import { contacts, funnelStages, users, messages } from '@/lib/db/schema';
+import { contacts, funnelStages, users, messages, chats } from '@/lib/db/schema';
 import { sql, eq, and, gte } from 'drizzle-orm';
 
 export async function getDashboardStats(teamId: number) {
@@ -59,10 +59,10 @@ export async function getDashboardStats(teamId: number) {
       count: sql<number>`count(${messages.id})`.mapWith(Number),
     })
     .from(messages)
-    .innerJoin(contacts, eq(messages.chatId, contacts.chatId))
+    .innerJoin(chats, eq(messages.chatId, chats.id))
     .where(
       and(
-        eq(contacts.teamId, teamId),
+        eq(chats.teamId, teamId),
         gte(messages.timestamp, startDate)
       )
     )

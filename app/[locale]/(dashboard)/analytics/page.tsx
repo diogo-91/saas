@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getDashboardStats } from './actions';
 import { TrafficHeatmap, FunnelLineChart, FunnelRadarChart, AgentList } from '@/components/dashboard/analytics-charts';
 import { getSession } from '@/lib/auth/session';
