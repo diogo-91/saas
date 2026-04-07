@@ -41,31 +41,44 @@ export function ForwardMessageModal({
   const handleForward = async (targetChat: Chat) => {
     if (!message) return;
 
-    const text = message.mediaCaption || message.text;
-    if (!text) {
+    // Remove prefix do remetente se já estiver no texto (evita duplicar ao encaminhar)
+    let rawText = message.mediaCaption || message.text;
+    if (!rawText) {
       toast.error('Só é possível encaminhar mensagens de texto.');
       return;
     }
+    if (senderName && rawText.startsWith(`${senderName}: `)) {
+      rawText = rawText.slice(`${senderName}: `.length);
+    }
 
-    setLoadingJid(targetChat.remoteJid!);
+    if (!targetChat.remoteJid) {
+      toast.error('Contato sem número associado.');
+      return;
+    }
+
+    setLoadingJid(targetChat.remoteJid);
     try {
       const res = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipientJid: targetChat.remoteJid,
-          text,
+          text: rawText,
           instanceId: targetChat.instanceId,
         }),
       });
 
-      if (!res.ok) throw new Error('Erro ao encaminhar');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(`Erro ${res.status}: ${data?.error || 'Falha ao encaminhar.'}`);
+        return;
+      }
 
       toast.success(`Encaminhado para ${targetChat.name || targetChat.remoteJid}`);
       onOpenChange(false);
       setSearch('');
-    } catch {
-      toast.error('Erro ao encaminhar mensagem.');
+    } catch (e: any) {
+      toast.error(`Erro ao encaminhar: ${e?.message || 'desconhecido'}`);
     } finally {
       setLoadingJid(null);
     }
