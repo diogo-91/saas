@@ -688,6 +688,7 @@ export default function ChatPage() {
         message={forwardMessage}
         chats={chats || []}
         currentJid={remoteJid}
+        currentInstanceId={currentChat?.instanceId}
         senderName={user?.name}
       />
 

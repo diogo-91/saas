@@ -15,6 +15,7 @@ interface ForwardMessageModalProps {
   message: Message | null;
   chats: Chat[];
   currentJid?: string | null;
+  currentInstanceId?: number | null;
   senderName?: string | null;
 }
 
@@ -24,6 +25,7 @@ export function ForwardMessageModal({
   message,
   chats,
   currentJid,
+  currentInstanceId,
   senderName,
 }: ForwardMessageModalProps) {
   const [search, setSearch] = useState('');
@@ -64,7 +66,7 @@ export function ForwardMessageModal({
         body: JSON.stringify({
           recipientJid: targetChat.remoteJid,
           text: rawText,
-          instanceId: targetChat.instanceId,
+          instanceId: currentInstanceId ?? targetChat.instanceId,
         }),
       });
 
