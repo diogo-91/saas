@@ -572,6 +572,15 @@ export async function POST(request: Request) {
 
         chatIdForAutomation = chat.id;
 
+        // Auto-cria contato se ainda não existir para este chat
+        if (!isFromMe) {
+          const contactName = messageData.pushName || chat.name || remoteJid.split('@')[0];
+          await tx
+            .insert(contacts)
+            .values({ teamId, chatId: chat.id, name: contactName })
+            .onConflictDoNothing();
+        }
+
         // messagePayload and mediaContent are from outer scope (pre-computed before transaction)
 
         let mainTextContent = messagePayload?.conversation || messagePayload?.extendedTextMessage?.text || null;

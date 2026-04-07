@@ -4,8 +4,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
 import * as XLSX from 'xlsx';
 import { 
-    Search, User as UserIcon, Filter, MoreVertical, 
-    Edit, Trash2, Phone, Save, X, Loader2, Plus, Settings2, FileSpreadsheet, Upload, Download
+    Search, User as UserIcon, Filter, MoreVertical,
+    Edit, Trash2, Phone, Save, X, Loader2, Plus, Settings2, FileSpreadsheet, Upload, Download, RefreshCw
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -92,6 +92,26 @@ export default function ContactsPage() {
     const [isFieldsManagerOpen, setIsFieldsManagerOpen] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSyncContacts = async () => {
+        setIsSyncing(true);
+        try {
+            const res = await fetch('/api/contacts/sync', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            if (data.created === 0) {
+                toast.success(data.message || 'Todos os contatos já estão sincronizados.');
+            } else {
+                toast.success(`${data.created} contato(s) sincronizado(s) com sucesso!`);
+                mutate('/api/contacts/list');
+            }
+        } catch (e: any) {
+            toast.error(`Erro ao sincronizar: ${e.message}`);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const [editName, setEditName] = useState('');
     const [editNotes, setEditNotes] = useState('');
@@ -477,6 +497,10 @@ export default function ContactsPage() {
                     </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" className="h-9 shadow-sm" onClick={handleSyncContacts} disabled={isSyncing}>
+                        {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                        Sincronizar
+                    </Button>
                     <Button variant="outline" size="sm" className="h-9 shadow-sm" onClick={() => setIsFieldsManagerOpen(true)}>
                         <Settings2 className="h-4 w-4 mr-2"/>
                         Campos Customizados
