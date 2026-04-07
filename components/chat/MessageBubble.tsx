@@ -640,6 +640,9 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
               <Lock className="h-2.5 w-2.5" /> Nota Interna
             </p>
           )}
+          {isFromMe && msg.senderName && !msg.isAi && !msg.isAutomation && (
+            <p className="text-[10px] font-medium opacity-70 mb-1">{msg.senderName}</p>
+          )}
           {renderQuotedMessage()}
           {renderContent()}
           <div className={`flex items-center gap-1 mt-1 ${isFromMe ? 'justify-end' : 'justify-start'}`}>

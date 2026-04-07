@@ -24,6 +24,7 @@ export interface Message {
   isInternal?: boolean | null;
   quotedMessageId?: string | null;
   quotedMessageText?: string | null;
+  senderName?: string | null;
   timestamp: string;
 }
 

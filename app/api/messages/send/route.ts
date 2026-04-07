@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
-import { getTeamForUser } from '@/lib/db/queries';
+import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { chats, messages, evolutionInstances } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { formatMessageForFrontend } from '@/lib/db/messages';
@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'recipientJid and text are required' }, { status: 400 });
     }
 
-    const team = await getTeamForUser();
+    const [team, currentUser] = await Promise.all([getTeamForUser(), getUser()]);
     if (!team) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const senderName = currentUser?.name || currentUser?.email || null;
 
     if (isInternal) {
       let chatConditions = [
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
         timestamp: new Date(),
         status: 'read' as const,
         isInternal: true,
+        senderName: senderName,
         mediaUrl: null,
         mediaMimetype: null,
         mediaCaption: null,
@@ -217,7 +219,8 @@ export async function POST(request: NextRequest) {
         locationAddress: null,
         quotedMessageId: dbQuotedMessageId,
         quotedMessageText: dbQuotedMessageText,
-        isInternal: false
+        isInternal: false,
+        senderName: senderName,
       };
 
       const [insertedMessage] = await tx.insert(messages).values(newMessageData).onConflictDoNothing().returning();

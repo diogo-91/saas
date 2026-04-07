@@ -156,6 +156,7 @@ export const messages = pgTable('messages', {
   quotedMessageId: varchar('quoted_message_id', { length: 255 }),
   quotedMessageText: text('quoted_message_text'),
   isInternal: boolean('is_internal').default(false),
+  senderName: text('sender_name'),
   timestamp: timestamp('timestamp', { withTimezone: true }).notNull(),
 });
 

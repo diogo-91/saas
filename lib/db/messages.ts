@@ -33,5 +33,6 @@ export function formatMessageForFrontend(dbMessage: Partial<Message>): FrontendM
     isInternal: dbMessage.isInternal || false,
     isAi: dbMessage.isAi || false,
     isAutomation: dbMessage.isAutomation || false,
+    senderName: dbMessage.senderName || null,
   };
 }
