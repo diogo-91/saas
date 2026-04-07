@@ -127,11 +127,11 @@ const HOURS = Array.from({ length: 24 }, (_, i) => `${i}h`);
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export function TrafficHeatmap({ data }: { data: any[] }) {
-  const maxVal = data?.reduce((max: number, item: any) => Math.max(max, item.count || 0), 1) || 1;
+  const maxVal = data?.reduce((max: number, item: any) => Math.max(max, Number(item.count) || 0), 1) || 1;
 
   const getCell = (day: number, hour: number) => {
-    const found = data?.find((d: any) => d.day === day && d.hour === hour);
-    return found?.count || 0;
+    const found = data?.find((d: any) => Number(d.day) === day && Number(d.hour) === hour);
+    return Number(found?.count) || 0;
   };
 
   const getOpacity = (count: number) => Math.max(0.08, count / maxVal);
