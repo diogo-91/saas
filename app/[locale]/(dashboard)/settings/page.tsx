@@ -562,10 +562,6 @@ export default function SettingsPage() {
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium mb-6">{t('team_title')}</h1>
-      <Suspense fallback={<SubscriptionSkeleton />}>
-        <ManageSubscription />
-      </Suspense>
-      
       <Suspense fallback={<PendingInvitationsSkeleton />}>
         <PendingInvitations />
       </Suspense>
