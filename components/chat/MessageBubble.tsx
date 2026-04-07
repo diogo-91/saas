@@ -7,7 +7,7 @@ import {
   Check, CheckCheck, Clock, Image as ImageIcon, FileText, Mic, Reply,
   Video, Lock, Trash2, MapPin, User, Download, Eye, BarChart2,
   Phone, AlertCircle, PhoneMissed, PhoneIncoming, PhoneOutgoing,
-  List, Users, Navigation,
+  List, Users, Navigation, Forward,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomAudioPlayer } from '@/components/ui/custom-audio-player';
@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   onMediaClick: (id: string) => void;
   onReply: (msg: Message) => void;
   onDeleteMessage?: (msgId: string) => void;
+  onForward?: (msg: Message) => void;
   searchQuery: string;
 }
 
@@ -158,7 +159,7 @@ function quotedTypeLabel(data: any): string {
   return map[t] || 'Mensagem';
 }
 
-export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, searchQuery }: MessageBubbleProps) {
+export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, onForward, searchQuery }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false);
   const isFromMe = msg.fromMe;
 
@@ -616,7 +617,7 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
     >
       <div className="flex items-end gap-1 max-w-[75%]">
         {!isFromMe && (
-          <div className={`transition-opacity ${showActions ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`flex flex-col gap-0.5 transition-opacity ${showActions ? 'opacity-100' : 'opacity-0'}`}>
             <Button
               variant="ghost"
               size="icon"
@@ -625,6 +626,17 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
             >
               <Reply className="h-3 w-3" />
             </Button>
+            {onForward && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={() => onForward(msg)}
+                title="Encaminhar mensagem"
+              >
+                <Forward className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         )}
 
@@ -663,6 +675,17 @@ export function MessageBubble({ msg, onMediaClick, onReply, onDeleteMessage, sea
             >
               <Reply className="h-3 w-3" />
             </Button>
+            {onForward && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={() => onForward(msg)}
+                title="Encaminhar mensagem"
+              >
+                <Forward className="h-3 w-3" />
+              </Button>
+            )}
             {onDeleteMessage && (
               <Button
                 variant="ghost"

@@ -22,6 +22,7 @@ import { ChatHeader } from '@/components/chat/ChatHeader';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { QuickRepliesModal } from '@/components/chat/QuickRepliesModal';
+import { ForwardMessageModal } from '@/components/chat/ForwardMessageModal';
 import { DateSeparator } from '@/components/chat/DateSeparator';
 
 export default function ChatPage() {
@@ -44,6 +45,8 @@ export default function ChatPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
+  const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
+  const [forwardModalOpen, setForwardModalOpen] = useState(false);
 
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -611,6 +614,7 @@ export default function ChatPage() {
             onMediaClick={handleMediaClick}
             onReply={setQuotedMessage}
             onDeleteMessage={handleDeleteMessage}
+            onForward={(m) => { setForwardMessage(m); setForwardModalOpen(true); }}
             searchQuery={searchQuery}
           />
         </React.Fragment>
@@ -678,6 +682,14 @@ export default function ChatPage() {
       />
 
       <QuickRepliesModal open={quickRepliesOpen} onOpenChange={setQuickRepliesOpen} />
+      <ForwardMessageModal
+        open={forwardModalOpen}
+        onOpenChange={setForwardModalOpen}
+        message={forwardMessage}
+        chats={chats || []}
+        currentJid={remoteJid}
+        senderName={user?.name}
+      />
 
       <Lightbox open={lightboxOpen} close={() => setLightboxOpen(false)} slides={slides} index={lightboxIndex} plugins={[Zoom, Video]} zoom={{ maxZoomPixelRatio: 3, doubleTapDelay: 300 }} />
     </div>
